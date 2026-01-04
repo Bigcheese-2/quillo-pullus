@@ -1,6 +1,6 @@
 {
-  "name": "Pullus Notes - Offline Note Taking",
-  "short_name": "Pullus Notes",
+  "name": "Quillo Note APP",
+  "short_name": "Quillo",
   "description": "An offline-first progressive web app for note-taking",
   "start_url": "/",
   "display": "standalone",

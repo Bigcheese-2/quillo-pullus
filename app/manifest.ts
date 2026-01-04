@@ -1,11 +1,10 @@
 import { MetadataRoute } from "next";
 
-
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Pullus Notes - Offline Note Taking",
-    short_name: "Pullus Notes",
-    description: "An offline-first progressive web app for note-taking",
+    name: "Quillo Note APP",
+    short_name: "Quillo",
+    description: "A note-taking app for offline use",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

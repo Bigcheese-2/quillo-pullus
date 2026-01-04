@@ -1,37 +1,45 @@
 import type { NextConfig } from "next";
-import withPWA from "next-pwa";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactStrictMode: true,
 };
 
-export default withPWA({
-  dest: "public",
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === "development", // Disable in dev for easier debugging
-  runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-      handler: "NetworkFirst",
-      options: {
-        cacheName: "supabase-api-cache",
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60, // 1 hour
-        },
-        networkTimeoutSeconds: 10,
-      },
-    },
-    {
-      urlPattern: /^https?:\/\/.*/i,
-      handler: "NetworkFirst",
-      options: {
-        cacheName: "offlineCache",
-        expiration: {
-          maxEntries: 200,
+let config: NextConfig = nextConfig;
+
+if (process.env.NODE_ENV === "production") {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const withPWA = require("next-pwa")({
+    dest: "public",
+    register: true,
+    skipWaiting: true,
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "supabase-api-cache",
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 60 * 60,
+          },
+          networkTimeoutSeconds: 10,
         },
       },
-    },
-  ],
-})(nextConfig);
+      {
+        urlPattern: ({ url }: { url: URL }) =>
+          url.origin === self.location.origin,
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "offlineCache",
+          expiration: {
+            maxEntries: 200,
+          },
+        },
+      },
+    ],
+  });
+
+  config = withPWA(config);
+}
+
+export default config;
