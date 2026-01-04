@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
+import { QueryProvider } from "@/lib/providers/query-provider";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -39,7 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={montserrat.variable}>
       <body className={`${montserrat.className} antialiased`}>
-        {children}
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );

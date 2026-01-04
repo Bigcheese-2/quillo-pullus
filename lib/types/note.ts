@@ -9,7 +9,5 @@ export interface Note {
 
 export type CreateNoteInput = Omit<Note, 'id' | 'created_at' | 'modified_at'>;
 
-export type UpdateNoteInput = Partial<Pick<Note, 'title' | 'content'>> & {
-  modified_at: string;
-};
+export type UpdateNoteInput = Partial<Pick<Note, 'title' | 'content'>>;
 
