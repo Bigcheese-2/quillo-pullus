@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/providers/query-provider";
+import { Toaster } from "sonner";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -41,6 +42,18 @@ export default function RootLayout({
     <html lang="en" className={montserrat.variable}>
       <body className={`${montserrat.className} antialiased`}>
         <QueryProvider>{children}</QueryProvider>
+        <Toaster
+          position="top-right"
+          theme="dark"
+          toastOptions={{
+            className: "toast-custom",
+            style: {
+              background: "var(--card)",
+              border: "1px solid var(--border)",
+              color: "var(--foreground)",
+            },
+          }}
+        />
       </body>
     </html>
   );
