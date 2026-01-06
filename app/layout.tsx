@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/providers/query-provider";
+import { ServiceWorkerRegister } from "@/lib/sw/service-worker-register";
 import { Toaster } from "sonner";
 
 const montserrat = Montserrat({
@@ -41,6 +42,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={montserrat.variable}>
       <body className={`${montserrat.className} antialiased`}>
+        <ServiceWorkerRegister />
         <QueryProvider>{children}</QueryProvider>
         <Toaster
           position="top-right"

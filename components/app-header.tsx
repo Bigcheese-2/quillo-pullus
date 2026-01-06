@@ -3,6 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Menu, Plus } from "lucide-react";
+import { SyncStatusBadge } from "@/components/sync";
 
 interface AppHeaderProps {
   onMenuClick?: () => void;
@@ -34,6 +35,11 @@ export function AppHeader({ onMenuClick, onNewNote }: AppHeaderProps) {
           placeholder="Search notes..."
           className="pl-10 h-10 rounded-lg bg-muted border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-accent/50 w-full"
         />
+      </div>
+
+      {/* Sync Status Badge */}
+      <div className="hidden sm:flex shrink-0">
+        <SyncStatusBadge />
       </div>
 
       {/* New Note button on mobile */}

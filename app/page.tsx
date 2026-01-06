@@ -9,6 +9,7 @@ import { NoteListPanelDesktop } from "@/components/note-list-panel-desktop";
 import { EditorCanvas } from "@/components/editor-canvas";
 import { NoteDialog } from "@/components/notes/note-dialog";
 import { DeleteConfirmDialog } from "@/components/notes/delete-confirm-dialog";
+import { OfflineIndicator } from "@/components/sync/offline-indicator";
 import { useNotes, useCreateNote, useUpdateNote, useDeleteNote } from "@/hooks/use-notes";
 import { Note } from "@/lib/types/note";
 import { cn } from "@/lib/utils";
@@ -55,8 +56,9 @@ export default function Home() {
     const userId = process.env.NEXT_PUBLIC_USER_ID;
     
     if (!userId) {
-      console.error("NEXT_PUBLIC_USER_ID is not set in environment variables");
-      alert("Error: User ID is not configured. Please check your .env.local file.");
+      toast.error("Configuration Error", {
+        description: "User ID is not configured.",
+      });
       return;
     }
 
@@ -72,10 +74,12 @@ export default function Home() {
         setNoteDialogOpen(false);
         setEditingNote(undefined);
         toast.success("Note updated successfully", {
-          description: "Your changes have been saved.",
+          description: "Your changes have been saved locally and will sync when online.",
         });
       } catch (error) {
-        console.error("Failed to update note:", error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Failed to update note:", error);
+        }
         toast.error("Failed to update note", {
           description: error instanceof Error ? error.message : "An unknown error occurred",
         });
@@ -90,10 +94,12 @@ export default function Home() {
         setNoteDialogOpen(false);
         setSelectedNoteId(newNote.id);
         toast.success("Note created successfully", {
-          description: "Your new note has been saved.",
+          description: "Your new note has been saved locally and will sync when online.",
         });
       } catch (error) {
-        console.error("Failed to create note:", error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Failed to create note:", error);
+        }
         toast.error("Failed to create note", {
           description: error instanceof Error ? error.message : "An unknown error occurred",
         });
@@ -116,7 +122,9 @@ export default function Home() {
           description: `"${noteTitle}" has been permanently deleted.`,
         });
       } catch (error) {
-        console.error("Failed to delete note:", error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Failed to delete note:", error);
+        }
         toast.error("Failed to delete note", {
           description: error instanceof Error ? error.message : "An unknown error occurred",
         });
@@ -129,7 +137,7 @@ export default function Home() {
     setSidebarOpen(false);
   };
 
-  if (isLoading) {
+  if (isLoading && notes.length === 0 && !error) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center space-y-2">
@@ -139,7 +147,7 @@ export default function Home() {
     );
   }
 
-  if (error) {
+  if (error && notes.length === 0) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     const isNetworkError = errorMessage.includes("Network error") || errorMessage.includes("Unable to connect");
     
@@ -152,7 +160,7 @@ export default function Home() {
           </p>
           {isNetworkError && (
             <p className="text-xs text-muted-foreground mt-2">
-              Please check your internet connection and try again.
+              Don&apos;t worry - your notes are saved locally. They will sync when you&apos;re back online.
             </p>
           )}
           <button
@@ -168,6 +176,8 @@ export default function Home() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <OfflineIndicator position="top" />
+      
       <AppSidebar
         onNewNote={handleCreateNote}
         isOpen={sidebarOpen}
@@ -176,7 +186,7 @@ export default function Home() {
 
       <div
         className={cn(
-          "flex-1 flex flex-col overflow-hidden transition-transform duration-[250ms] ease-out will-change-transform",
+          "flex-1 flex flex-col overflow-hidden transition-transform duration-250 ease-out will-change-transform",
           "lg:ml-0 lg:translate-x-0",
           sidebarOpen ? "translate-x-64" : "translate-x-0"
         )}
@@ -246,7 +256,6 @@ export default function Home() {
         onOpenChange={(open) => {
           setDeleteDialogOpen(open);
           if (!open) {
-            // Clear deleting note when dialog closes
             setDeletingNote(undefined);
           }
         }}

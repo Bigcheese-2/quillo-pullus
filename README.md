@@ -2,219 +2,174 @@
 
 A progressive web application for note-taking with offline-first capabilities, built with Next.js, TypeScript, and Supabase.
 
-## Project Overview
+## Overview
 
-Quillo is an offline-first progressive web app that allows users to create, edit, and delete notes seamlessly, whether online or offline. The application automatically synchronizes data when connectivity is restored, ensuring a smooth user experience regardless of network conditions.
+Quillo is an offline-first PWA that allows users to create, edit, and delete notes seamlessly, whether online or offline. The application automatically synchronizes data when connectivity is restored.
 
-### Current Status: Phase 1 Complete ✅
+**Status**: Phase 3 Complete ✅ (Offline functionality fully implemented)
 
-Phase 1 focused on project initialization, foundation setup, and PWA infrastructure. The application is now ready for feature implementation.
-
-## Technology Stack
+## Tech Stack
 
 - **Framework**: Next.js 16.1.1 (App Router)
 - **Language**: TypeScript 5
-- **Styling**: Tailwind CSS 4
-- **UI Components**: shadcn/ui (Radix UI primitives)
-- **Font**: Montserrat (Google Fonts)
+- **Styling**: Tailwind CSS 4 + shadcn/ui
+- **Data**: @tanstack/react-query, IndexedDB (idb)
 - **PWA**: next-pwa 5.6.0
-- **Data Fetching**: @tanstack/react-query 5.90.16
-- **Offline Storage**: idb 8.0.3 (IndexedDB wrapper)
-- **Backend**: Supabase (REST API)
-- **Notifications**: Sonner 2.0.7
+- **Backend**: Supabase REST API
 
-## Project Structure
+## Features
 
-```
-pullus-assessment-1/
-├── app/
-│   ├── layout.tsx          # Root layout with font and metadata
-│   ├── page.tsx             # Main page (to be implemented)
-│   ├── manifest.ts          # PWA manifest route
-│   └── globals.css          # Global styles and CSS variables
-├── components/
-│   └── ui/                  # shadcn/ui components
-│       ├── button.tsx
-│       ├── card.tsx
-│       ├── dialog.tsx
-│       ├── input.tsx
-│       ├── textarea.tsx
-│       └── badge.tsx
-├── lib/
-│   ├── types/               # TypeScript type definitions
-│   │   ├── note.ts          # Note data model
-│   │   └── sync.ts          # Sync status and operations
-│   ├── utils/               # Utility functions
-│   │   └── utils.ts         # cn() class name utility
-│   ├── supabase/            # Supabase client (to be implemented)
-│   └── db/                  # IndexedDB wrapper (to be implemented)
-├── public/
-│   ├── manifest.json        # PWA manifest
-│   ├── logo.svg             # App logo/favicon
-│   └── icons/               # PWA icons (192x192, 512x512)
-├── .env.local               # Environment variables (not committed)
-├── .env.example             # Environment variables template
-├── components.json          # shadcn/ui configuration
-├── next.config.ts           # Next.js and PWA configuration
-└── package.json             # Dependencies and scripts
-```
+- ✅ **Offline-First**: All CRUD operations work offline
+- ✅ **Background Sync**: Automatic retry with exponential backoff
+- ✅ **Optimistic Updates**: Instant UI feedback
+- ✅ **Data Persistence**: IndexedDB storage survives browser restarts
+- ✅ **Sync Status UI**: Real-time sync state indicators
 
-## Phase 1 Implementation Details
-
-### 1. Project Setup
-
-- ✅ Next.js 16 with TypeScript configured
-- ✅ Tailwind CSS 4 with custom theme variables
-- ✅ ESLint configuration
-- ✅ Path aliases (`@/*`) configured
-
-### 2. UI Component System
-
-- ✅ shadcn/ui configured and initialized
-- ✅ Base components installed:
-  - Button
-  - Card
-  - Dialog
-  - Input
-  - Textarea
-  - Badge
-- ✅ Utility function `cn()` for class name merging
-
-### 3. Typography & Styling
-
-- ✅ Montserrat font from Google Fonts
-- ✅ Dark mode support via CSS variables
-- ✅ Responsive design foundation
-- ✅ Custom color scheme (background/foreground)
-
-### 4. TypeScript Types
-
-- ✅ `Note` interface matching Supabase schema
-- ✅ `CreateNoteInput` and `UpdateNoteInput` types
-- ✅ `SyncStatus` type for sync state tracking
-- ✅ `SyncOperation` and `SyncState` interfaces
-
-### 5. PWA Configuration
-
-- ✅ next-pwa configured for service worker generation
-- ✅ PWA manifest with app metadata
-- ✅ Runtime caching strategies:
-  - NetworkFirst for Supabase API calls
-  - NetworkFirst for same-origin requests
-- ✅ Service worker disabled in development (for easier debugging)
-- ✅ App icons directory structure
-
-### 6. Environment Configuration
-
-- ✅ Environment variables setup:
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-  - `NEXT_PUBLIC_USER_ID`
-- ✅ `.env.example` template for reference
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- Node.js 20+ 
-- npm or yarn
+- Node.js 20+
+- Supabase account
 
 ### Installation
 
-1. Clone the repository:
 ```bash
+# Clone and install
 git clone <repository-url>
 cd pullus-assessment-1
-```
-
-2. Install dependencies:
-```bash
 npm install
-```
 
-3. Set up environment variables:
-```bash
+# Set up environment variables
 cp .env.example .env.local
 ```
 
-4. Update `.env.local` with your credentials:
+Update `.env.local`:
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://scwaxiuduzyziuyjfwda.supabase.co/rest/v1
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co/rest/v1
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
-NEXT_PUBLIC_USER_ID=your_email@example.com
+NEXT_PUBLIC_USER_ID=user@example.com
 ```
-
-5. Add PWA icons:
-   - Place `icon-192.png` (192x192) in `public/icons/`
-   - Place `icon-512.png` (512x512) in `public/icons/`
 
 ### Development
 
-Run the development server:
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the app.
+**Note**: PWA features are only enabled in production builds.
 
-### Build
+### Production Build
 
-Build for production:
 ```bash
 npm run build
-```
-
-Start production server:
-```bash
 npm start
 ```
 
-## Configuration Files
+## Testing Offline Functionality
 
-### `next.config.ts`
+### Setup
 
-- React Strict Mode enabled
-- PWA configuration (production only)
-- Service worker caching strategies
-- Supabase API caching (1 hour TTL)
+1. Build and start in production mode:
+   ```bash
+   npm run build
+   npm start
+   ```
 
-### `components.json`
+2. Open Chrome/Edge and navigate to `http://localhost:3000`
 
-shadcn/ui configuration:
-- Style: default
-- Base color: slate
-- CSS variables enabled
-- Path aliases configured
+3. Open DevTools (F12) → Network tab
 
-### `app/layout.tsx`
+### Simulate Offline
 
-- Montserrat font configuration
-- PWA metadata (title, description, icons)
-- Viewport configuration (responsive, theme color)
-- Apple Web App configuration
+**Chrome DevTools:**
+1. Open DevTools → Network tab
+2. Click "No throttling" dropdown
+3. Select "Offline"
 
-## Type Definitions
+### Test Scenarios
 
-### Note Model
+#### 1. Create Note Offline
+- Go offline → Create note
+- **Expected**: Note appears immediately, offline indicator shows, sync status shows "Pending"
 
-```typescript
-interface Note {
-  id: string;              // UUID (server-generated)
-  user_id: string;         // Email address
-  title: string;           // Max 100 characters
-  content: string;         // Max 5000 characters
-  created_at: string;      // ISO 8601 timestamp
-  modified_at: string;     // ISO 8601 timestamp
-}
+#### 2. Edit Note Offline
+- Go offline → Edit existing note
+- **Expected**: Changes appear immediately, operation queued for sync
 
+#### 3. Delete Note Offline
+- Go offline → Delete note
+- **Expected**: Note disappears immediately, deletion queued
 
-interface SyncOperation {
-  id: string;
-  type: 'create' | 'update' | 'delete';
-  noteId?: string;
-  noteData?: unknown;
-  status: SyncStatus;
-  queuedAt: string;
-  retryCount: number;
-  error?: string;
-}
+#### 4. Sync When Online
+- Go offline → Make changes → Go back online
+- **Expected**: Offline indicator shows "Back online. Syncing...", operations sync automatically, toast notification
+
+#### 5. Browser Restart Persistence
+- Go offline → Create notes → Close browser → Reopen
+- **Expected**: Notes persist (IndexedDB), sync when online
+
+#### 6. Manual Sync
+- Go offline → Create note → Go online → Click sync button in header
+- **Expected**: Sync status shows "Syncing", then "Synced", pending count goes to 0
+
+### Verify Data
+
+**Check IndexedDB:**
+- DevTools → Application → IndexedDB → `notes-db`
+- Check `notes` store (all notes) and `sync_operations` store (pending syncs)
+
+**Check Service Worker:**
+- DevTools → Application → Service Workers
+- Should show "activated and is running"
+
+### Troubleshooting
+
+- **Service Worker not registering**: Make sure you're in production mode (`npm run build && npm start`)
+- **Sync not working**: Check Supabase credentials in `.env.local`, check Network tab for errors
+- **Data not persisting**: Check IndexedDB in DevTools, verify database version is 2
+
+## Architecture
+
+### Offline-First Flow
+
+```
+User Action → IndexedDB (immediate) → UI Update (optimistic)
+                ↓
+         If Online: Sync to Supabase
+         If Offline: Queue for Background Sync
+```
+
+### Key Components
+
+- `lib/services/note-service.ts` - Offline-first service layer
+- `lib/services/sync-manager.ts` - Background sync with retry logic
+- `lib/db/indexeddb.ts` - IndexedDB wrapper for local storage
+- `hooks/use-notes.ts` - React Query hooks with optimistic updates
+
+## Project Structure
+
+```
+├── app/                    # Next.js app router
+├── components/
+│   ├── notes/            # Note management UI
+│   ├── sync/             # Sync status components
+│   └── ui/               # shadcn/ui components
+├── lib/
+│   ├── services/        # Business logic (note-service, sync-manager)
+│   ├── db/              # IndexedDB wrapper
+│   └── supabase/        # API client
+└── hooks/               # React hooks (use-notes, use-sync-status)
+```
+
+## Code Quality
+
+- ✅ TypeScript strict mode
+- ✅ JSDoc documentation
+- ✅ Comprehensive error handling
+- ✅ Production-ready (console statements dev-only)
+- ✅ No hardcoded secrets
+
+## License
+
+Private project for assessment purposes.
