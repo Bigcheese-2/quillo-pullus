@@ -224,8 +224,8 @@ export default function Home() {
         }
       }
     } else {
-      setSelectedNoteId(noteId);
-      setSidebarOpen(false);
+    setSelectedNoteId(noteId);
+    setSidebarOpen(false);
     }
   };
   
@@ -320,9 +320,10 @@ export default function Home() {
 
   return (
 
-    <div className=" flex bg-muted lg:p-4 lg:gap-4 xl:gap-5 xl:p-5 h-screen 2xl:max-w-[1440px] 2xl:mx-auto">
+    <div className="flex flex-col bg-muted lg:p-4 lg:gap-4 xl:gap-5 xl:p-5 h-screen 2xl:max-w-[1440px] 2xl:mx-auto">
       <OfflineIndicator position="top" />
 
+      <div className="flex flex-1 overflow-hidden gap-4 xl:gap-5">
       <AppSidebar
         onNewNote={handleCreateNote}
         isOpen={sidebarOpen}
@@ -352,62 +353,62 @@ export default function Home() {
 
         <div className="flex-1 flex overflow-hidden rounded-xl flex-col">
           <div className="flex-1 flex overflow-hidden">
-            {!selectedNoteId ? (
-              <NoteListPanel
-                notes={filteredNotes}
-                selectedNoteId={selectedNoteId}
-                onNoteSelect={handleNoteSelect}
-                onNewNote={handleCreateNote}
-                searchQuery={searchQuery}
-                isMultiSelectMode={multiSelect.isSelectionMode}
-                multiSelectedIds={multiSelect.selectedIds}
-                onMultiSelectToggle={(noteId, e) => handleNoteSelect(noteId, e)}
-                onEnableSelectionMode={multiSelect.enableSelectionMode}
-              />
-            ) : (
-              <div className="md:hidden flex-1">
-                <EditorCanvas
-                  selectedNote={selectedNote}
-                  onEdit={handleEditNote}
-                  onDelete={handleDeleteNote}
-                  onArchive={handleArchiveNote}
-                  onRestore={handleRestoreNote}
-                  onBack={() => setSelectedNoteId(undefined)}
-                  hasNotes={filteredNotes.length > 0}
-                  onNewNote={handleCreateNote}
-                  view={currentView}
-                />
-              </div>
-            )}
-
-            <NoteListPanelDesktop
+          {!selectedNoteId ? (
+            <NoteListPanel
               notes={filteredNotes}
               selectedNoteId={selectedNoteId}
               onNoteSelect={handleNoteSelect}
               onNewNote={handleCreateNote}
               searchQuery={searchQuery}
-              view={currentView}
-              onArchive={handleArchiveNote}
-              onTrash={handleDeleteNote}
-              onRestore={handleRestoreNote}
-              isMultiSelectMode={multiSelect.isSelectionMode}
-              multiSelectedIds={multiSelect.selectedIds}
-              onMultiSelectToggle={(noteId, e) => handleNoteSelect(noteId, e)}
-              onEnableSelectionMode={multiSelect.enableSelectionMode}
+                isMultiSelectMode={multiSelect.isSelectionMode}
+                multiSelectedIds={multiSelect.selectedIds}
+                onMultiSelectToggle={(noteId, e) => handleNoteSelect(noteId, e)}
+                onEnableSelectionMode={multiSelect.enableSelectionMode}
             />
-
-            <div className="hidden md:flex flex-1">
+          ) : (
+            <div className="md:hidden flex-1">
               <EditorCanvas
                 selectedNote={selectedNote}
                 onEdit={handleEditNote}
                 onDelete={handleDeleteNote}
                 onArchive={handleArchiveNote}
                 onRestore={handleRestoreNote}
+                onBack={() => setSelectedNoteId(undefined)}
                 hasNotes={filteredNotes.length > 0}
                 onNewNote={handleCreateNote}
                 view={currentView}
               />
             </div>
+          )}
+
+          <NoteListPanelDesktop
+            notes={filteredNotes}
+            selectedNoteId={selectedNoteId}
+            onNoteSelect={handleNoteSelect}
+            onNewNote={handleCreateNote}
+            searchQuery={searchQuery}
+            view={currentView}
+            onArchive={handleArchiveNote}
+            onTrash={handleDeleteNote}
+            onRestore={handleRestoreNote}
+              isMultiSelectMode={multiSelect.isSelectionMode}
+              multiSelectedIds={multiSelect.selectedIds}
+              onMultiSelectToggle={(noteId, e) => handleNoteSelect(noteId, e)}
+              onEnableSelectionMode={multiSelect.enableSelectionMode}
+          />
+
+          <div className="hidden md:flex flex-1">
+            <EditorCanvas
+              selectedNote={selectedNote}
+              onEdit={handleEditNote}
+              onDelete={handleDeleteNote}
+              onArchive={handleArchiveNote}
+              onRestore={handleRestoreNote}
+              hasNotes={filteredNotes.length > 0}
+              onNewNote={handleCreateNote}
+              view={currentView}
+            />
+          </div>
           </div>
           
           {multiSelect.hasSelection && (
@@ -433,6 +434,7 @@ export default function Home() {
             <Plus className="w-6 h-6" />
           </Button>
         )}
+        </div>
       </div>
 
       <NoteDialog

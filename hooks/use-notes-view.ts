@@ -51,6 +51,25 @@ export function useNotesView(view: NoteView = 'all') {
     throwOnError: false,
   });
 
+  // Listen for sync completion events and refetch
+  useEffect(() => {
+    if (view !== 'all') return;
+
+    const handleSyncComplete = (event: CustomEvent) => {
+      if (event.detail?.userId === userId) {
+        // Refetch after a short delay to ensure IndexedDB is updated
+        setTimeout(() => {
+          activeQuery.refetch();
+        }, 100);
+      }
+    };
+
+    window.addEventListener('notes-synced', handleSyncComplete as EventListener);
+    return () => {
+      window.removeEventListener('notes-synced', handleSyncComplete as EventListener);
+    };
+  }, [view, userId, activeQuery]);
+
   const archivedQuery = useQuery({
     queryKey: [ARCHIVED_QUERY_KEY, userId],
     queryFn: async () => {

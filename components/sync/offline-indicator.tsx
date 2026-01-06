@@ -54,13 +54,10 @@ export function OfflineIndicator({
   return (
     <div
       className={cn(
-        'fixed left-0 right-0 z-50 bg-yellow-500 dark:bg-yellow-600 text-yellow-900 dark:text-yellow-100',
-        'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium',
-        'transition-transform duration-300 ease-in-out',
-        position === 'top' 
-          ? 'top-0 translate-y-0' 
-          : 'bottom-0 translate-y-0',
-        !show && (position === 'top' ? '-translate-y-full' : 'translate-y-full'),
+        'w-[98%] md:w-5/6 lg:w-1/2 bg-yellow-500 rounded-lg mx-auto dark:bg-yellow-600 text-yellow-900 dark:text-yellow-100',
+        'px-4  flex items-center justify-center gap-2 py-3 text-sm font-medium',
+        'transition-all duration-300 ease-in-out',
+        show ? 'opacity-100 max-h-20' : 'opacity-0 max-h-0 overflow-hidden',
         className
       )}
       role="alert"
@@ -74,7 +71,7 @@ export function OfflineIndicator({
       ) : (
         <>
           <WifiOff className="h-4 w-4" />
-          <span>You&apos;re offline. Changes are saved locally and will sync when you&apos;re back online.</span>
+          <span  className='text-xs md:text-base'>You&apos;re offline. Changes are saved locally and will sync when you&apos;re back online.</span>
         </>
       )}
     </div>
