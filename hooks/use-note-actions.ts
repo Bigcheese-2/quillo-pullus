@@ -8,6 +8,10 @@ import {
   trashNote,
   restoreNote,
   deleteNotePermanently,
+  archiveNotes,
+  trashNotes,
+  restoreNotes,
+  deleteNotesPermanently,
 } from '@/lib/services/note-service';
 import type { Note } from '@/lib/types/note';
 
@@ -272,6 +276,97 @@ export function useDeleteNotePermanently() {
         queryClient.setQueryData([DELETED_QUERY_KEY, userId], context.previousDeleted);
       }
       toast.error('Failed to delete note', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    },
+  });
+}
+
+// Bulk operations hooks
+export function useBulkArchiveNotes() {
+  const queryClient = useQueryClient();
+  const userId = getUserId();
+
+  return useMutation({
+    mutationFn: (ids: string[]) => archiveNotes(ids, userId),
+    onSuccess: (archivedNotes, ids) => {
+      queryClient.invalidateQueries({ queryKey: [NOTES_QUERY_KEY, userId] });
+      queryClient.invalidateQueries({ queryKey: [ARCHIVED_QUERY_KEY, userId] });
+      toast.success(`${archivedNotes.length} note${archivedNotes.length === 1 ? '' : 's'} archived`, {
+        description: archivedNotes.length < ids.length 
+          ? `Some notes could not be archived.`
+          : 'The notes have been moved to archive.',
+      });
+    },
+    onError: (error) => {
+      toast.error('Failed to archive notes', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    },
+  });
+}
+
+export function useBulkTrashNotes() {
+  const queryClient = useQueryClient();
+  const userId = getUserId();
+
+  return useMutation({
+    mutationFn: (ids: string[]) => trashNotes(ids, userId),
+    onSuccess: (trashedNotes, ids) => {
+      queryClient.invalidateQueries({ queryKey: [NOTES_QUERY_KEY, userId] });
+      queryClient.invalidateQueries({ queryKey: [ARCHIVED_QUERY_KEY, userId] });
+      queryClient.invalidateQueries({ queryKey: [DELETED_QUERY_KEY, userId] });
+      toast.success(`${trashedNotes.length} note${trashedNotes.length === 1 ? '' : 's'} moved to trash`, {
+        description: trashedNotes.length < ids.length 
+          ? `Some notes could not be moved to trash.`
+          : 'The notes have been moved to trash.',
+      });
+    },
+    onError: (error) => {
+      toast.error('Failed to move notes to trash', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    },
+  });
+}
+
+export function useBulkRestoreNotes() {
+  const queryClient = useQueryClient();
+  const userId = getUserId();
+
+  return useMutation({
+    mutationFn: (ids: string[]) => restoreNotes(ids, userId),
+    onSuccess: (restoredNotes, ids) => {
+      queryClient.invalidateQueries({ queryKey: [NOTES_QUERY_KEY, userId] });
+      queryClient.invalidateQueries({ queryKey: [DELETED_QUERY_KEY, userId] });
+      toast.success(`${restoredNotes.length} note${restoredNotes.length === 1 ? '' : 's'} restored`, {
+        description: restoredNotes.length < ids.length 
+          ? `Some notes could not be restored.`
+          : 'The notes have been restored from trash.',
+      });
+    },
+    onError: (error) => {
+      toast.error('Failed to restore notes', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    },
+  });
+}
+
+export function useBulkDeleteNotesPermanently() {
+  const queryClient = useQueryClient();
+  const userId = getUserId();
+
+  return useMutation({
+    mutationFn: (ids: string[]) => deleteNotesPermanently(ids, userId),
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: [DELETED_QUERY_KEY, userId] });
+      toast.success(`${ids.length} note${ids.length === 1 ? '' : 's'} deleted permanently`, {
+        description: 'The notes have been permanently deleted.',
+      });
+    },
+    onError: (error) => {
+      toast.error('Failed to delete notes', {
         description: error instanceof Error ? error.message : 'An unknown error occurred',
       });
     },

@@ -62,7 +62,7 @@ export function EditorCanvas({
     <div className="flex-1 flex flex-col h-full bg-background overflow-hidden">
       <div className="border-b border-border">
         <div className="px-4 md:px-8 py-3 md:py-4">
-          <div className="max-w-3xl mx-auto space-y-3">
+        <div className="max-w-3xl mx-auto space-y-3">
           {onBack && (
             <div className="md:hidden">
               <Button
@@ -84,15 +84,15 @@ export function EditorCanvas({
             <p className="text-sm text-muted-foreground">Last updated {timeAgo}</p>
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
               {view !== 'trash' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit?.(selectedNote)}
-                  className="rounded-lg flex-1 sm:flex-initial"
-                >
-                  <Pencil className="w-4 h-4 sm:mr-2" />
-                  <span className="sm:inline">Edit</span>
-                </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onEdit?.(selectedNote)}
+                className="rounded-lg flex-1 sm:flex-initial"
+              >
+                <Pencil className="w-4 h-4 sm:mr-2" />
+                <span className="sm:inline">Edit</span>
+              </Button>
               )}
               
               {view === 'trash' && onRestore && (
@@ -144,19 +144,19 @@ export function EditorCanvas({
               )}
               
               {view === 'trash' && onDelete && (
-                <Button
-                  variant="ghost"
-                  size="sm"
+              <Button
+                variant="ghost"
+                size="sm"
                   onClick={() => onDelete(selectedNote)}
-                  className="rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 flex-1 sm:flex-initial"
-                >
-                  <Trash2 className="w-4 h-4 sm:mr-2" />
-                  <span className="sm:inline">Delete</span>
-                </Button>
+                className="rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 flex-1 sm:flex-initial"
+              >
+                <Trash2 className="w-4 h-4 sm:mr-2" />
+                <span className="sm:inline">Delete</span>
+              </Button>
               )}
             </div>
+            </div>
           </div>
-        </div>
         </div>
       </div>
 

@@ -12,6 +12,8 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             staleTime: 60 * 1000,
             refetchOnWindowFocus: false,
             retry: 1,
+            // Enable request deduplication - multiple components requesting same query will share one request
+            structuralSharing: true,
           },
         },
       })

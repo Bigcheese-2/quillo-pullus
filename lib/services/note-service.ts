@@ -20,6 +20,10 @@ export {
   trashNote,
   restoreNote,
   deleteNotePermanently,
+  archiveNotes,
+  trashNotes,
+  restoreNotes,
+  deleteNotesPermanently,
 } from './note-lifecycle';
 
 export {

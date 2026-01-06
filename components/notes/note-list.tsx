@@ -16,6 +16,9 @@ interface NoteListProps {
   className?: string;
   isLoading?: boolean;
   searchQuery?: string;
+  isMultiSelectMode?: boolean;
+  multiSelectedIds?: Set<string>;
+  onMultiSelectToggle?: (noteId: string) => void;
 }
 
 export function NoteList({
@@ -26,6 +29,9 @@ export function NoteList({
   className,
   isLoading = false,
   searchQuery,
+  isMultiSelectMode = false,
+  multiSelectedIds = new Set(),
+  onMultiSelectToggle,
 }: NoteListProps) {
   const pendingNoteIds = usePendingNotes();
 
@@ -77,9 +83,12 @@ export function NoteList({
           key={note.id}
           note={note}
           isSelected={selectedNoteId === note.id}
-          onClick={() => onNoteSelect?.(note.id)}
+          onClick={(e) => onNoteSelect?.(note.id, e)}
           index={index}
           isPending={pendingNoteIds.has(note.id)}
+          isMultiSelectMode={isMultiSelectMode}
+          isMultiSelected={multiSelectedIds.has(note.id)}
+          onMultiSelectToggle={(e) => onMultiSelectToggle?.(note.id, e)}
         />
       ))}
     </div>

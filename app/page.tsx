@@ -13,7 +13,9 @@ import { OfflineIndicator } from "@/components/sync/offline-indicator";
 import { useNotes, useCreateNote, useUpdateNote, useDeleteNote } from "@/hooks/use-notes";
 import { useNotesView } from "@/hooks/use-notes-view";
 import { useNoteSearch } from "@/hooks/use-note-search";
-import { useArchiveNote, useUnarchiveNote, useTrashNote, useRestoreNote, useDeleteNotePermanently } from "@/hooks/use-note-actions";
+import { useArchiveNote, useUnarchiveNote, useTrashNote, useRestoreNote, useDeleteNotePermanently, useBulkArchiveNotes, useBulkTrashNotes, useBulkRestoreNotes, useBulkDeleteNotesPermanently } from "@/hooks/use-note-actions";
+import { useMultiSelect } from "@/hooks/use-multi-select";
+import { SelectionToolbar } from "@/components/notes/selection-toolbar";
 import { Note, NoteView } from "@/lib/types/note";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,6 +33,23 @@ export default function Home() {
   const trashNoteMutation = useTrashNote();
   const restoreNoteMutation = useRestoreNote();
   const deletePermanentlyMutation = useDeleteNotePermanently();
+  
+  // Bulk operations
+  const bulkArchiveMutation = useBulkArchiveNotes();
+  const bulkTrashMutation = useBulkTrashNotes();
+  const bulkRestoreMutation = useBulkRestoreNotes();
+  const bulkDeletePermanentlyMutation = useBulkDeleteNotesPermanently();
+  
+  // Multi-selection
+  const multiSelect = useMultiSelect<string>();
+  const { clearSelection } = multiSelect;
+  
+  const handleEnableSelectionMode = () => {
+    multiSelect.enableSelectionMode();
+    if (selectedNoteId) {
+      setSelectedNoteId(undefined);
+    }
+  };
 
   const { searchQuery, setSearchQuery, filteredNotes } = useNoteSearch(notes);
 
@@ -51,8 +70,27 @@ export default function Home() {
 
   useEffect(() => {
     setSelectedNoteId(undefined);
-    refetch();
-  }, [currentView, refetch]);
+    clearSelection();
+  }, [currentView, clearSelection]);
+  
+  // Keyboard shortcuts for multi-selection
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + A to select all
+      if ((e.metaKey || e.ctrlKey) && e.key === 'a' && !multiSelect.isSelectionMode) {
+        e.preventDefault();
+        handleEnableSelectionMode();
+        multiSelect.selectAll(filteredNotes.map(n => n.id));
+      }
+      // Escape to clear selection
+      if (e.key === 'Escape' && multiSelect.hasSelection) {
+        multiSelect.clearSelection();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredNotes, multiSelect]);
 
   const handleCreateNote = () => {
     if (currentView !== 'all') {
@@ -170,9 +208,77 @@ export default function Home() {
     }
   };
 
-  const handleNoteSelect = (noteId: string) => {
-    setSelectedNoteId(noteId);
-    setSidebarOpen(false);
+  const handleNoteSelect = (noteId: string, e?: React.MouseEvent) => {
+    if (multiSelect.isSelectionMode) {
+      const noteIndex = filteredNotes.findIndex(n => n.id === noteId);
+      if (e?.shiftKey && multiSelect.lastSelectedIndex !== null && noteIndex !== -1) {
+        // Range selection with Shift+Click
+        const noteIds = filteredNotes.map(n => n.id);
+        multiSelect.selectRange(noteIds, multiSelect.lastSelectedIndex, noteIndex);
+        multiSelect.setLastSelectedIndex(noteIndex);
+      } else {
+        // Single selection
+        multiSelect.toggleSelection(noteId);
+        if (noteIndex !== -1) {
+          multiSelect.setLastSelectedIndex(noteIndex);
+        }
+      }
+    } else {
+      setSelectedNoteId(noteId);
+      setSidebarOpen(false);
+    }
+  };
+  
+  const handleBulkArchive = async () => {
+    const ids = Array.from(multiSelect.selectedIds);
+    try {
+      await bulkArchiveMutation.mutateAsync(ids);
+      multiSelect.clearSelection();
+      if (selectedNoteId && ids.includes(selectedNoteId)) {
+        setSelectedNoteId(undefined);
+      }
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
+  
+  const handleBulkTrash = async () => {
+    const ids = Array.from(multiSelect.selectedIds);
+    try {
+      await bulkTrashMutation.mutateAsync(ids);
+      multiSelect.clearSelection();
+      if (selectedNoteId && ids.includes(selectedNoteId)) {
+        setSelectedNoteId(undefined);
+      }
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
+  
+  const handleBulkRestore = async () => {
+    const ids = Array.from(multiSelect.selectedIds);
+    try {
+      await bulkRestoreMutation.mutateAsync(ids);
+      multiSelect.clearSelection();
+      if (selectedNoteId && ids.includes(selectedNoteId)) {
+        setSelectedNoteId(undefined);
+      }
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
+  
+  const handleBulkDeletePermanently = async () => {
+    const ids = Array.from(multiSelect.selectedIds);
+    try {
+      await bulkDeletePermanentlyMutation.mutateAsync(ids);
+      multiSelect.clearSelection();
+      if (selectedNoteId && ids.includes(selectedNoteId)) {
+        setSelectedNoteId(undefined);
+      }
+    } catch (error) {
+      // Error is handled by the mutation
+    }
   };
 
   if (isLoading && notes.length === 0 && !error) {
@@ -238,59 +344,84 @@ export default function Home() {
               onMenuClick={() => setSidebarOpen((prev) => !prev)}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
+              onEnableSelectionMode={handleEnableSelectionMode}
+              isSelectionMode={multiSelect.isSelectionMode}
             />
           </div>
         </div>
 
-        <div className="flex-1 flex overflow-hidden rounded-xl">
-          {!selectedNoteId ? (
-            <NoteListPanel
+        <div className="flex-1 flex overflow-hidden rounded-xl flex-col">
+          <div className="flex-1 flex overflow-hidden">
+            {!selectedNoteId ? (
+              <NoteListPanel
+                notes={filteredNotes}
+                selectedNoteId={selectedNoteId}
+                onNoteSelect={handleNoteSelect}
+                onNewNote={handleCreateNote}
+                searchQuery={searchQuery}
+                isMultiSelectMode={multiSelect.isSelectionMode}
+                multiSelectedIds={multiSelect.selectedIds}
+                onMultiSelectToggle={(noteId, e) => handleNoteSelect(noteId, e)}
+                onEnableSelectionMode={multiSelect.enableSelectionMode}
+              />
+            ) : (
+              <div className="md:hidden flex-1">
+                <EditorCanvas
+                  selectedNote={selectedNote}
+                  onEdit={handleEditNote}
+                  onDelete={handleDeleteNote}
+                  onArchive={handleArchiveNote}
+                  onRestore={handleRestoreNote}
+                  onBack={() => setSelectedNoteId(undefined)}
+                  hasNotes={filteredNotes.length > 0}
+                  onNewNote={handleCreateNote}
+                  view={currentView}
+                />
+              </div>
+            )}
+
+            <NoteListPanelDesktop
               notes={filteredNotes}
               selectedNoteId={selectedNoteId}
               onNoteSelect={handleNoteSelect}
               onNewNote={handleCreateNote}
               searchQuery={searchQuery}
+              view={currentView}
+              onArchive={handleArchiveNote}
+              onTrash={handleDeleteNote}
+              onRestore={handleRestoreNote}
+              isMultiSelectMode={multiSelect.isSelectionMode}
+              multiSelectedIds={multiSelect.selectedIds}
+              onMultiSelectToggle={(noteId, e) => handleNoteSelect(noteId, e)}
+              onEnableSelectionMode={multiSelect.enableSelectionMode}
             />
-          ) : (
-            <div className="md:hidden flex-1">
+
+            <div className="hidden md:flex flex-1">
               <EditorCanvas
                 selectedNote={selectedNote}
                 onEdit={handleEditNote}
                 onDelete={handleDeleteNote}
                 onArchive={handleArchiveNote}
                 onRestore={handleRestoreNote}
-                onBack={() => setSelectedNoteId(undefined)}
                 hasNotes={filteredNotes.length > 0}
                 onNewNote={handleCreateNote}
                 view={currentView}
               />
             </div>
-          )}
-
-          <NoteListPanelDesktop
-            notes={filteredNotes}
-            selectedNoteId={selectedNoteId}
-            onNoteSelect={handleNoteSelect}
-            onNewNote={handleCreateNote}
-            searchQuery={searchQuery}
-            view={currentView}
-            onArchive={handleArchiveNote}
-            onTrash={handleDeleteNote}
-            onRestore={handleRestoreNote}
-          />
-
-          <div className="hidden md:flex flex-1">
-            <EditorCanvas
-              selectedNote={selectedNote}
-              onEdit={handleEditNote}
-              onDelete={handleDeleteNote}
-              onArchive={handleArchiveNote}
-              onRestore={handleRestoreNote}
-              hasNotes={filteredNotes.length > 0}
-              onNewNote={handleCreateNote}
+          </div>
+          
+          {multiSelect.hasSelection && (
+            <SelectionToolbar
+              selectedCount={multiSelect.selectedCount}
+              totalCount={filteredNotes.length}
+              onClearSelection={multiSelect.clearSelection}
+              onSelectAll={() => multiSelect.toggleSelectAll(filteredNotes.map(n => n.id))}
+              onArchive={currentView !== 'trash' ? handleBulkArchive : undefined}
+              onDelete={currentView === 'trash' ? handleBulkDeletePermanently : handleBulkTrash}
+              onRestore={currentView === 'trash' ? handleBulkRestore : undefined}
               view={currentView}
             />
-          </div>
+          )}
         </div>
 
         {currentView === 'all' && (

@@ -10,20 +10,25 @@ import { isOnline } from './note-utils';
 
 export async function getAllNotes(userId: string): Promise<Note[]> {
   try {
-    const localNotes = await getNotesByUserId(userId, false, false);
-
     if (isOnline()) {
-      syncFromServer(userId).catch((error) => {
+      try {
+        await syncFromServer(userId);
+        const syncedNotes = await getNotesByUserId(userId, false, false);
+        return syncedNotes;
+      } catch (syncError) {
         if (process.env.NODE_ENV === 'development') {
-          console.warn('Background sync failed:', error);
+          console.warn('Failed to sync from server, using local data:', syncError);
         }
-      });
+        const localNotes = await getNotesByUserId(userId, false, false);
+        return localNotes;
+      }
+    } else {
+      const localNotes = await getNotesByUserId(userId, false, false);
+      return localNotes;
     }
-
-    return localNotes;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to get notes from IndexedDB:', error);
+      console.error('Failed to get notes:', error);
     }
     return [];
   }

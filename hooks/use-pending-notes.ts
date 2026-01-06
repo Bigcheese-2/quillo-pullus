@@ -57,4 +57,3 @@ export function usePendingNotes(): Set<string> {
 
   return pendingNoteIds;
 }
-

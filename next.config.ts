@@ -2,9 +2,36 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Add empty turbopack config to silence the warning
+  // Added empty turbopack config to silence the warning
   // next-pwa uses webpack, so we need to allow webpack config
   turbopack: {},
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          ...config.optimization?.splitChunks,
+          minSize: 20000,
+          maxSize: 244000,
+          cacheGroups: {
+            ...config.optimization?.splitChunks?.cacheGroups,
+            default: {
+              minChunks: 2,
+              priority: -20,
+              reuseExistingChunk: true,
+            },
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              priority: -10,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+      };
+    }
+    return config;
+  },
 };
 
 let config: NextConfig = nextConfig;

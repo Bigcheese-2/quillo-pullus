@@ -100,6 +100,28 @@ export async function detectAndResolveAllConflicts(
 ): Promise<Conflict[]> {
   try {
     const serverNotes = await noteAPI.fetchAllNotes(userId);
+    return detectAndResolveAllConflictsWithNotes(userId, serverNotes);
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Failed to detect conflicts:', error);
+    }
+    return [];
+  }
+}
+
+/**
+ * Detects and resolves conflicts using pre-fetched server notes.
+ * This avoids duplicate API calls when server notes are already fetched.
+ * 
+ * @param userId - The user's email address
+ * @param serverNotes - Pre-fetched notes from the server
+ * @returns Array of resolved conflicts
+ */
+export async function detectAndResolveAllConflictsWithNotes(
+  userId: string,
+  serverNotes: Note[]
+): Promise<Conflict[]> {
+  try {
     const conflicts: Conflict[] = [];
 
     for (const serverNote of serverNotes) {

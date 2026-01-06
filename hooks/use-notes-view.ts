@@ -41,12 +41,13 @@ export function useNotesView(view: NoteView = 'all') {
       }
     },
     enabled: view === 'all',
-    staleTime: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
     gcTime: 24 * 60 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: true,
     refetchOnMount: true,
+    placeholderData: (previousData) => previousData,
     throwOnError: false,
   });
 

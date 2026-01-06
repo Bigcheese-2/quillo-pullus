@@ -11,26 +11,15 @@ import {
   getSyncOperationById,
 } from '@/lib/db/indexeddb';
 
-/**
- * Maximum number of retry attempts before giving up on a sync operation.
- */
+
 const MAX_RETRY_ATTEMPTS = 3;
 
-/**
- * Base delay in milliseconds for exponential backoff.
- */
+
 const BASE_RETRY_DELAY_MS = 1000;
 
-/**
- * Background Sync tag used to register sync events.
- */
 const SYNC_TAG = 'sync-notes';
 
-/**
- * Checks if the browser is currently online.
- * 
- * @returns true if online, false if offline
- */
+
 function isOnline(): boolean {
   if (typeof navigator === 'undefined') {
     return false;
@@ -38,11 +27,7 @@ function isOnline(): boolean {
   return navigator.onLine;
 }
 
-/**
- * Checks if Background Sync API is supported.
- * 
- * @returns true if Background Sync is supported
- */
+
 function isBackgroundSyncSupported(): boolean {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
     return false;

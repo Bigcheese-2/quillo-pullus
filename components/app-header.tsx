@@ -1,16 +1,24 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, CheckSquare } from "lucide-react";
 import { NoteSearch } from "@/components/notes/note-search";
 
 interface AppHeaderProps {
   onMenuClick?: () => void;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
+  onEnableSelectionMode?: () => void;
+  isSelectionMode?: boolean;
 }
 
-export function AppHeader({ onMenuClick, searchQuery = '', onSearchChange }: AppHeaderProps) {
+export function AppHeader({ 
+  onMenuClick, 
+  searchQuery = '', 
+  onSearchChange,
+  onEnableSelectionMode,
+  isSelectionMode = false,
+}: AppHeaderProps) {
   return (
     <div className="flex items-center gap-2 sm:gap-3 w-full">
       <Button
@@ -32,6 +40,18 @@ export function AppHeader({ onMenuClick, searchQuery = '', onSearchChange }: App
           placeholder="Search notes..."
         />
       </div>
+      
+      {onEnableSelectionMode && !isSelectionMode && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onEnableSelectionMode}
+          className="rounded-lg shrink-0 h-9 w-9"
+          aria-label="Enable selection mode"
+        >
+          <CheckSquare className="w-5 h-5" />
+        </Button>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { getSyncStatus, processSyncQueue } from '@/lib/services/sync-manager';
 import { formatConflictMessage } from '@/lib/services/conflict-resolver';
@@ -24,6 +24,12 @@ export function useSyncStatus() {
   });
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
+  const isSyncingRef = useRef(isSyncing);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    isSyncingRef.current = isSyncing;
+  }, [isSyncing]);
 
   const updateSyncState = useCallback(async () => {
     try {
@@ -31,7 +37,7 @@ export function useSyncStatus() {
       
       let overallStatus: SyncState['status'] = 'synced';
       if (status.pendingCount > 0 || status.failedCount > 0) {
-        overallStatus = isSyncing ? 'syncing' : status.failedCount > 0 ? 'failed' : 'pending';
+        overallStatus = isSyncingRef.current ? 'syncing' : status.failedCount > 0 ? 'failed' : 'pending';
       }
 
       setSyncState({
@@ -47,10 +53,10 @@ export function useSyncStatus() {
       }
       setLastError(error instanceof Error ? error.message : 'Unknown error');
     }
-  }, [isSyncing]);
+  }, []);
 
   const triggerSync = useCallback(async (): Promise<number> => {
-    if (isSyncing) {
+    if (isSyncingRef.current) {
       return 0;
     }
 
@@ -79,7 +85,7 @@ export function useSyncStatus() {
     } finally {
       setIsSyncing(false);
     }
-  }, [isSyncing, updateSyncState]);
+  }, [updateSyncState]);
 
   useEffect(() => {
     updateSyncState();
