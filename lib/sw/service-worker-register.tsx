@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
+import { toast } from 'sonner';
 import { registerServiceWorker } from './register';
 import { processSyncQueue } from '@/lib/services/sync-manager';
+import { formatConflictMessage } from '@/lib/services/conflict-resolver';
 
 /**
  * Client component that registers the service worker on mount.
@@ -10,9 +12,7 @@ import { processSyncQueue } from '@/lib/services/sync-manager';
  */
 export function ServiceWorkerRegister() {
   useEffect(() => {
-    // Only register in production (PWA is disabled in dev to avoid Turbopack conflicts)
-    if (process.env.NODE_ENV === 'production') {
-      registerServiceWorker({
+    registerServiceWorker({
         onUpdateAvailable: () => {
           if (process.env.NODE_ENV === 'development') {
             console.log('New service worker available');
@@ -30,15 +30,21 @@ export function ServiceWorkerRegister() {
         },
       });
 
-      // Listen for Background Sync events from service worker
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('message', async (event) => {
           if (event.data && event.data.type === 'SYNC_NOTES') {
             const userId = process.env.NEXT_PUBLIC_USER_ID || 'user@example.com';
             try {
-              const syncedCount = await processSyncQueue(userId);
-              if (syncedCount > 0 && process.env.NODE_ENV === 'development') {
-                console.log(`Background sync completed: ${syncedCount} operations synced`);
+              const result = await processSyncQueue(userId);
+              if (result.syncedCount > 0 && process.env.NODE_ENV === 'development') {
+                console.log(`Background sync completed: ${result.syncedCount} operations synced`);
+              }
+              if (result.conflicts.length > 0) {
+                result.conflicts.forEach((conflict) => {
+                  toast.info(formatConflictMessage(conflict), {
+                    duration: 5000,
+                  });
+                });
               }
             } catch (error) {
               if (process.env.NODE_ENV === 'development') {
@@ -49,11 +55,17 @@ export function ServiceWorkerRegister() {
         });
       }
 
-      // Listen for online events to trigger sync
       const handleOnline = async () => {
         const userId = process.env.NEXT_PUBLIC_USER_ID || 'user@example.com';
         try {
-          await processSyncQueue(userId);
+          const result = await processSyncQueue(userId);
+          if (result.conflicts.length > 0) {
+            result.conflicts.forEach((conflict) => {
+              toast.info(formatConflictMessage(conflict), {
+                duration: 5000,
+              });
+            });
+          }
           } catch (error) {
             if (process.env.NODE_ENV === 'development') {
               console.error('Online sync failed:', error);
@@ -66,7 +78,6 @@ export function ServiceWorkerRegister() {
       return () => {
         window.removeEventListener('online', handleOnline);
       };
-    }
   }, []);
 
   return null;

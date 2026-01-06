@@ -11,14 +11,28 @@ import { NoteDialog } from "@/components/notes/note-dialog";
 import { DeleteConfirmDialog } from "@/components/notes/delete-confirm-dialog";
 import { OfflineIndicator } from "@/components/sync/offline-indicator";
 import { useNotes, useCreateNote, useUpdateNote, useDeleteNote } from "@/hooks/use-notes";
-import { Note } from "@/lib/types/note";
+import { useNotesView } from "@/hooks/use-notes-view";
+import { useNoteSearch } from "@/hooks/use-note-search";
+import { useArchiveNote, useUnarchiveNote, useTrashNote, useRestoreNote, useDeleteNotePermanently } from "@/hooks/use-note-actions";
+import { Note, NoteView } from "@/lib/types/note";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 export default function Home() {
-  const { data: notes = [], isLoading, error, refetch } = useNotes();
+  const [currentView, setCurrentView] = useState<NoteView>('all');
+
+  const { data: notes = [], isLoading, error, refetch } = useNotesView(currentView);
   const createNoteMutation = useCreateNote();
   const updateNoteMutation = useUpdateNote();
   const deleteNoteMutation = useDeleteNote();
+  const archiveNoteMutation = useArchiveNote();
+  const unarchiveNoteMutation = useUnarchiveNote();
+  const trashNoteMutation = useTrashNote();
+  const restoreNoteMutation = useRestoreNote();
+  const deletePermanentlyMutation = useDeleteNotePermanently();
+
+  const { searchQuery, setSearchQuery, filteredNotes } = useNoteSearch(notes);
 
   const [selectedNoteId, setSelectedNoteId] = useState<string | undefined>(undefined);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -27,15 +41,23 @@ export default function Home() {
   const [editingNote, setEditingNote] = useState<Note | undefined>(undefined);
   const [deletingNote, setDeletingNote] = useState<Note | undefined>(undefined);
 
-  const selectedNote = notes.find((note) => note.id === selectedNoteId);
+  const selectedNote = filteredNotes.find((note) => note.id === selectedNoteId);
 
   useEffect(() => {
-    if (notes.length > 0 && !selectedNoteId) {
-      setSelectedNoteId(notes[0].id);
+    if (filteredNotes.length === 0 && selectedNoteId) {
+      setSelectedNoteId(undefined);
     }
-  }, [notes, selectedNoteId]);
+  }, [filteredNotes.length, selectedNoteId]);
+
+  useEffect(() => {
+    setSelectedNoteId(undefined);
+    refetch();
+  }, [currentView, refetch]);
 
   const handleCreateNote = () => {
+    if (currentView !== 'all') {
+      setCurrentView('all');
+    }
     setEditingNote(undefined);
     setNoteDialogOpen(true);
     setSidebarOpen(false);
@@ -46,15 +68,39 @@ export default function Home() {
     setNoteDialogOpen(true);
   };
 
-  // Handle delete note
   const handleDeleteNote = (note: Note) => {
-    setDeletingNote(note);
-    setDeleteDialogOpen(true);
+    if (currentView === 'trash') {
+      setDeletingNote(note);
+      setDeleteDialogOpen(true);
+    } else {
+      trashNoteMutation.mutate(note.id);
+      if (selectedNoteId === note.id) {
+        setSelectedNoteId(undefined);
+      }
+    }
+  };
+
+  const handleArchiveNote = (note: Note) => {
+    if (note.archived) {
+      unarchiveNoteMutation.mutate(note.id);
+    } else {
+      archiveNoteMutation.mutate(note.id);
+    }
+    if (selectedNoteId === note.id) {
+      setSelectedNoteId(undefined);
+    }
+  };
+
+  const handleRestoreNote = (note: Note) => {
+    restoreNoteMutation.mutate(note.id);
+    if (selectedNoteId === note.id) {
+      setSelectedNoteId(undefined);
+    }
   };
 
   const handleNoteSubmit = async (data: { title: string; content: string }) => {
     const userId = process.env.NEXT_PUBLIC_USER_ID;
-    
+
     if (!userId) {
       toast.error("Configuration Error", {
         description: "User ID is not configured.",
@@ -109,25 +155,17 @@ export default function Home() {
 
   const handleDeleteConfirm = async () => {
     if (deletingNote) {
-      const noteTitle = deletingNote.title || "Untitled";
       try {
-        await deleteNoteMutation.mutateAsync(deletingNote.id);
+        await deletePermanentlyMutation.mutateAsync(deletingNote.id);
         setDeleteDialogOpen(false);
         if (selectedNoteId === deletingNote.id) {
-          const remainingNotes = notes.filter((note) => note.id !== deletingNote.id);
-          setSelectedNoteId(remainingNotes[0]?.id);
+          setSelectedNoteId(undefined);
         }
         setDeletingNote(undefined);
-        toast.success("Note deleted", {
-          description: `"${noteTitle}" has been permanently deleted.`,
-        });
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.error("Failed to delete note:", error);
         }
-        toast.error("Failed to delete note", {
-          description: error instanceof Error ? error.message : "An unknown error occurred",
-        });
       }
     }
   };
@@ -141,7 +179,7 @@ export default function Home() {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center space-y-2">
-          <p className="text-muted-foreground">Loading notes...</p>
+          <p className="text-accent">Quillo.</p>
         </div>
       </div>
     );
@@ -150,7 +188,7 @@ export default function Home() {
   if (error && notes.length === 0) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     const isNetworkError = errorMessage.includes("Network error") || errorMessage.includes("Unable to connect");
-    
+
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center space-y-4 max-w-md px-6">
@@ -175,36 +213,43 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+
+    <div className=" flex bg-muted lg:p-4 lg:gap-4 xl:gap-5 xl:p-5 h-screen 2xl:max-w-[1440px] 2xl:mx-auto">
       <OfflineIndicator position="top" />
-      
+
       <AppSidebar
         onNewNote={handleCreateNote}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        currentView={currentView}
+        onViewChange={setCurrentView}
       />
 
       <div
         className={cn(
-          "flex-1 flex flex-col overflow-hidden transition-transform duration-250 ease-out will-change-transform",
+          "flex-1 flex flex-col overflow-hidden lg:rounded-xl  bg-background transition-transform duration-250 ease-out will-change-transform",
           "lg:ml-0 lg:translate-x-0",
           sidebarOpen ? "translate-x-64" : "translate-x-0"
         )}
       >
-        <div className="p-4 border-b border-border">
-          <AppHeader
-            onMenuClick={() => setSidebarOpen((prev) => !prev)}
-            onNewNote={handleCreateNote}
-          />
+        <div className="border-b border-border">
+          <div className="px-3 sm:px-4 py-4">
+            <AppHeader
+              onMenuClick={() => setSidebarOpen((prev) => !prev)}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+            />
+          </div>
         </div>
 
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden rounded-xl">
           {!selectedNoteId ? (
             <NoteListPanel
-              notes={notes}
+              notes={filteredNotes}
               selectedNoteId={selectedNoteId}
               onNoteSelect={handleNoteSelect}
               onNewNote={handleCreateNote}
+              searchQuery={searchQuery}
             />
           ) : (
             <div className="md:hidden flex-1">
@@ -212,18 +257,26 @@ export default function Home() {
                 selectedNote={selectedNote}
                 onEdit={handleEditNote}
                 onDelete={handleDeleteNote}
+                onArchive={handleArchiveNote}
+                onRestore={handleRestoreNote}
                 onBack={() => setSelectedNoteId(undefined)}
-                hasNotes={notes.length > 0}
+                hasNotes={filteredNotes.length > 0}
                 onNewNote={handleCreateNote}
+                view={currentView}
               />
             </div>
           )}
 
           <NoteListPanelDesktop
-            notes={notes}
+            notes={filteredNotes}
             selectedNoteId={selectedNoteId}
             onNoteSelect={handleNoteSelect}
             onNewNote={handleCreateNote}
+            searchQuery={searchQuery}
+            view={currentView}
+            onArchive={handleArchiveNote}
+            onTrash={handleDeleteNote}
+            onRestore={handleRestoreNote}
           />
 
           <div className="hidden md:flex flex-1">
@@ -231,11 +284,24 @@ export default function Home() {
               selectedNote={selectedNote}
               onEdit={handleEditNote}
               onDelete={handleDeleteNote}
-              hasNotes={notes.length > 0}
+              onArchive={handleArchiveNote}
+              onRestore={handleRestoreNote}
+              hasNotes={filteredNotes.length > 0}
               onNewNote={handleCreateNote}
+              view={currentView}
             />
           </div>
         </div>
+
+        {currentView === 'all' && (
+          <Button
+            onClick={handleCreateNote}
+            className="lg:hidden fixed bottom-6 right-6 h-14 w-14 rounded-full bg-accent hover:bg-accent/90 text-white shadow-lg shadow-black/20 z-50 flex items-center justify-center p-0"
+            aria-label="New Note"
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+        )}
       </div>
 
       <NoteDialog
@@ -243,7 +309,6 @@ export default function Home() {
         onOpenChange={(open) => {
           setNoteDialogOpen(open);
           if (!open) {
-            // Clear editing note when dialog closes
             setEditingNote(undefined);
           }
         }}
@@ -261,7 +326,9 @@ export default function Home() {
         }}
         noteTitle={deletingNote?.title || "Untitled"}
         onConfirm={handleDeleteConfirm}
+        isPermanent={currentView === 'trash'}
       />
     </div>
+
   );
 }

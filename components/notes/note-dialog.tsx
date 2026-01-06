@@ -37,7 +37,7 @@ export function NoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl rounded-lg">
+      <DialogContent className="sm:max-w-2xl rounded-xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             {isEditMode ? "Edit Note" : "New Note"}

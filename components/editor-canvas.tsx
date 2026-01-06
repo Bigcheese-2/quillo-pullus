@@ -1,7 +1,7 @@
 "use client";
 
-import { FileText, Pencil, Trash2, ArrowLeft } from "lucide-react";
-import { Note } from "@/lib/types/note";
+import { FileText, Pencil, Trash2, ArrowLeft, Archive, ArchiveRestore } from "lucide-react";
+import { Note, NoteView } from "@/lib/types/note";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 
@@ -9,30 +9,28 @@ interface EditorCanvasProps {
   selectedNote?: Note;
   onEdit?: (note: Note) => void;
   onDelete?: (note: Note) => void;
-  onBack?: () => void;
-}
-
-interface EditorCanvasProps {
-  selectedNote?: Note;
-  onEdit?: (note: Note) => void;
-  onDelete?: (note: Note) => void;
+  onArchive?: (note: Note) => void;
+  onRestore?: (note: Note) => void;
   onBack?: () => void;
   hasNotes?: boolean;
   onNewNote?: () => void;
+  view?: NoteView;
 }
 
 export function EditorCanvas({
   selectedNote,
   onEdit,
   onDelete,
+  onArchive,
+  onRestore,
   onBack,
   hasNotes = true,
   onNewNote,
+  view = 'all',
 }: EditorCanvasProps) {
   if (!selectedNote) {
     return (
       <div className="flex-1 flex flex-col h-full bg-background overflow-hidden">
-        {/* Empty State */}
         <div className="flex-1 flex items-center justify-center overflow-y-auto">
           <div className="text-center space-y-4 max-w-md px-6">
             <div className="flex justify-center">
@@ -62,17 +60,19 @@ export function EditorCanvas({
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background overflow-hidden">
-      {/* Header with Actions */}
-      <div className="border-b border-border px-4 md:px-8 py-4">
-        <div className="max-w-3xl mx-auto space-y-3">
-          {/* Mobile: Back button */}
+      <div className="border-b border-border">
+        <div className="px-4 md:px-8 py-3 md:py-4">
+          <div className="max-w-3xl mx-auto space-y-3">
           {onBack && (
             <div className="md:hidden">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onBack}
-                className="rounded-lg -ml-2"
+                onClick={() => {
+                  onBack();
+                }}
+                className="rounded-lg -ml-2 px-2"
+                type="button"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
@@ -82,27 +82,81 @@ export function EditorCanvas({
           
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">Last updated {timeAgo}</p>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onEdit?.(selectedNote)}
-                className="rounded-lg flex-1 sm:flex-initial"
-              >
-                <Pencil className="w-4 h-4 sm:mr-2" />
-                <span className="sm:inline">Edit</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete?.(selectedNote)}
-                className="rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 flex-1 sm:flex-initial"
-              >
-                <Trash2 className="w-4 h-4 sm:mr-2" />
-                <span className="sm:inline">Delete</span>
-              </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+              {view !== 'trash' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit?.(selectedNote)}
+                  className="rounded-lg flex-1 sm:flex-initial"
+                >
+                  <Pencil className="w-4 h-4 sm:mr-2" />
+                  <span className="sm:inline">Edit</span>
+                </Button>
+              )}
+              
+              {view === 'trash' && onRestore && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRestore(selectedNote)}
+                  className="rounded-lg flex-1 sm:flex-initial"
+                >
+                  <ArchiveRestore className="w-4 h-4 sm:mr-2" />
+                  <span className="sm:inline">Restore</span>
+                </Button>
+              )}
+              
+              {view === 'archived' && onArchive && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onArchive(selectedNote)}
+                  className="rounded-lg flex-1 sm:flex-initial"
+                >
+                  <ArchiveRestore className="w-4 h-4 sm:mr-2" />
+                  <span className="sm:inline">Unarchive</span>
+                </Button>
+              )}
+              
+              {view === 'all' && onArchive && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onArchive(selectedNote)}
+                  className="rounded-lg flex-1 sm:flex-initial"
+                >
+                  <Archive className="w-4 h-4 sm:mr-2" />
+                  <span className="sm:inline">Archive</span>
+                </Button>
+              )}
+              
+              {view !== 'trash' && onDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete(selectedNote)}
+                  className="rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 flex-1 sm:flex-initial"
+                >
+                  <Trash2 className="w-4 h-4 sm:mr-2" />
+                  <span className="sm:inline">Trash</span>
+                </Button>
+              )}
+              
+              {view === 'trash' && onDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete(selectedNote)}
+                  className="rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 flex-1 sm:flex-initial"
+                >
+                  <Trash2 className="w-4 h-4 sm:mr-2" />
+                  <span className="sm:inline">Delete</span>
+                </Button>
+              )}
             </div>
           </div>
+        </div>
         </div>
       </div>
 

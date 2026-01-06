@@ -4,32 +4,15 @@ import { useEffect, useState } from 'react';
 import { WifiOff, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/**
- * Props for the OfflineIndicator component.
- */
+
 interface OfflineIndicatorProps {
-  /**
-   * Additional CSS classes to apply.
-   */
+
   className?: string;
   
-  /**
-   * Position of the indicator.
-   * @default 'top'
-   */
   position?: 'top' | 'bottom';
 }
 
-/**
- * OfflineIndicator component displays a banner when the user is offline.
- * 
- * Features:
- * - Automatically shows/hides based on online status
- * - Smooth slide-in/out animation
- * - Clear messaging about offline mode
- * 
- * @param props - Component props
- */
+
 export function OfflineIndicator({ 
   className,
   position = 'top',
@@ -42,7 +25,6 @@ export function OfflineIndicator({
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      // Hide after a short delay to show the "back online" message
       setTimeout(() => setShow(false), 2000);
     };
 
@@ -51,7 +33,6 @@ export function OfflineIndicator({
       setShow(true);
     };
 
-    // Set initial state
     if (typeof navigator !== 'undefined') {
       setIsOnline(navigator.onLine);
       setShow(!navigator.onLine);

@@ -21,13 +21,6 @@ function getUserId(): string {
   return userId;
 }
 
-/**
- * React Query hook to fetch all notes for the current user.
- * Uses offline-first service - reads from IndexedDB immediately, syncs in background.
- * Notes are automatically cached and refetched when the cache is invalidated.
- * 
- * @returns React Query result with notes array, loading state, and error state
- */
 export function useNotes() {
   const userId = getUserId();
 
@@ -58,14 +51,6 @@ export function useNotes() {
   });
 }
 
-/**
- * React Query hook to fetch a single note by ID.
- * Uses offline-first service - reads from IndexedDB immediately.
- * Only runs when an ID is provided (enabled: !!id).
- * 
- * @param id - The note's unique identifier (UUID)
- * @returns React Query result with note object, loading state, and error state
- */
 export function useNote(id: string) {
   const userId = getUserId();
 
@@ -79,13 +64,6 @@ export function useNote(id: string) {
   });
 }
 
-/**
- * React Query mutation hook to create a new note.
- * Uses offline-first service - saves to IndexedDB immediately, syncs in background.
- * Uses optimistic updates to show new note immediately in UI.
- * 
- * @returns Mutation object with mutate/mutateAsync functions
- */
 export function useCreateNote() {
   const queryClient = useQueryClient();
   const userId = getUserId();
@@ -133,13 +111,6 @@ export function useCreateNote() {
   });
 }
 
-/**
- * React Query mutation hook to update an existing note.
- * Uses offline-first service - updates IndexedDB immediately, syncs in background.
- * Uses optimistic updates to show changes immediately in UI.
- * 
- * @returns Mutation object with mutate/mutateAsync functions
- */
 export function useUpdateNote() {
   const queryClient = useQueryClient();
   const userId = getUserId();
@@ -201,13 +172,6 @@ export function useUpdateNote() {
   });
 }
 
-/**
- * React Query mutation hook to delete a note.
- * Uses offline-first service - deletes from IndexedDB immediately, syncs in background.
- * Uses optimistic updates to remove note immediately from UI.
- * 
- * @returns Mutation object with mutate/mutateAsync functions
- */
 export function useDeleteNote() {
   const queryClient = useQueryClient();
   const userId = getUserId();

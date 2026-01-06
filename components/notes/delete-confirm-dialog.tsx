@@ -16,6 +16,7 @@ interface DeleteConfirmDialogProps {
   onOpenChange: (open: boolean) => void;
   noteTitle: string;
   onConfirm: () => void;
+  isPermanent?: boolean;
 }
 
 export function DeleteConfirmDialog({
@@ -23,6 +24,7 @@ export function DeleteConfirmDialog({
   onOpenChange,
   noteTitle,
   onConfirm,
+  isPermanent = false,
 }: DeleteConfirmDialogProps) {
   const handleConfirm = () => {
     onConfirm();
@@ -43,10 +45,10 @@ export function DeleteConfirmDialog({
             </div>
             <div>
               <DialogTitle className="text-lg font-semibold">
-                Delete Note
+                {isPermanent ? 'Delete Note Permanently' : 'Move to Trash'}
               </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground mt-1">
-                This action cannot be undone.
+                {isPermanent ? 'This action cannot be undone.' : 'You can restore it from trash later.'}
               </DialogDescription>
             </div>
           </div>
@@ -54,9 +56,16 @@ export function DeleteConfirmDialog({
 
         <div className="py-4">
           <p className="text-sm text-foreground">
-            Are you sure you want to delete{" "}
-            <span className="font-medium">"{noteTitle}"</span>? This note will
-            be permanently removed.
+            {isPermanent ? (
+              <>
+                Are you sure you want to permanently delete{" "}
+                <span className="font-medium">"{noteTitle}"</span>? This action cannot be undone.
+              </>
+            ) : (
+              <>
+                Move <span className="font-medium">"{noteTitle}"</span> to trash? You can restore it later.
+              </>
+            )}
           </p>
         </div>
 
@@ -75,7 +84,7 @@ export function DeleteConfirmDialog({
             onClick={handleConfirm}
             className="rounded-lg"
           >
-            Delete
+            {isPermanent ? 'Delete Permanently' : 'Move to Trash'}
           </Button>
         </DialogFooter>
       </DialogContent>

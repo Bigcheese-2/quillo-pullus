@@ -2,64 +2,79 @@
 
 import type React from "react";
 import { Button } from "@/components/ui/button";
-import { Clock, Star, Archive, Trash2, Tag } from "lucide-react";
+import { Clock, Archive, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { NoteView } from "@/lib/types/note";
 
 interface SidebarItem {
   icon: React.ReactNode;
   label: string;
-  active?: boolean;
+  view: NoteView;
 }
 
 const navigationItems: SidebarItem[] = [
-  { icon: <Clock className="w-4 h-4" />, label: "Recent", active: true },
-  { icon: <Star className="w-4 h-4" />, label: "Starred" },
-  { icon: <Archive className="w-4 h-4" />, label: "Archive" },
-  { icon: <Trash2 className="w-4 h-4" />, label: "Trash" },
+  { icon: <Clock className="w-4 h-4" />, label: "All Notes", view: "all" },
+  { icon: <Archive className="w-4 h-4" />, label: "Archive", view: "archived" },
+  { icon: <Trash2 className="w-4 h-4" />, label: "Trash", view: "trash" },
 ];
-
-const tags = ["work", "personal", "planning", "design"];
 
 interface AppSidebarProps {
   onNewNote?: () => void;
   isOpen?: boolean;
   onClose?: () => void;
+  currentView?: NoteView;
+  onViewChange?: (view: NoteView) => void;
 }
 
-export function AppSidebar({ onNewNote, isOpen = true, onClose }: AppSidebarProps) {
+export function AppSidebar({ 
+  onNewNote, 
+  isOpen = true, 
+  onClose,
+  currentView = 'all',
+  onViewChange,
+}: AppSidebarProps) {
+  const handleViewClick = (view: NoteView) => {
+    onViewChange?.(view);
+    onClose?.();
+  };
+
   return (
     <aside
       className={cn(
-        "fixed lg:static inset-y-0 left-0 z-50 w-64 border-r border-border bg-background flex flex-col h-screen",
-        "transition-transform duration-[250ms] ease-out will-change-transform",
+        "fixed lg:static inset-y-0 left-0 z-50 w-64 border-r border-border lg:rounded-xl bg-background flex flex-col h-full",
+        "transition-transform duration-250 ease-out will-change-transform",
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}
     >
-      {/* Header */}
-      <div className="p-6 border-b border-border">
-        <h1 className="text-2xl font-bold text-accent">Quillo</h1>
+      <div className="border-b border-border">
+        <div className="px-6 py-5">
+          <h1 className="text-2xl font-bold text-accent">Quillo</h1>
+        </div>
       </div>
 
-      {/* New Note Button */}
-      <div className="p-4 border-b border-border">
-        <Button
-          onClick={onNewNote}
-          className="w-full bg-accent hover:bg-accent/90 text-white rounded-lg h-10 font-medium"
-          size="default"
-        >
-          <span className="mr-2">+</span>
-          New Note
-        </Button>
-      </div>
+      {currentView === 'all' && (
+        <div className="border-b border-border">
+          <div className="p-4">
+            <Button
+              onClick={onNewNote}
+              className="w-full bg-accent hover:bg-accent/90 text-white rounded-lg h-10 font-medium"
+              size="default"
+            >
+              <span className="mr-2">+</span>
+              New Note
+            </Button>
+          </div>
+        </div>
+      )}
 
-      {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
         {navigationItems.map((item) => (
           <button
-            key={item.label}
+            key={item.view}
+            onClick={() => handleViewClick(item.view)}
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-              item.active
+              currentView === item.view
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
@@ -70,8 +85,7 @@ export function AppSidebar({ onNewNote, isOpen = true, onClose }: AppSidebarProp
         ))}
       </nav>
 
-      {/* Tags Section */}
-      <div className="p-4 border-t border-border">
+      {/* <div className="p-4 border-t border-border">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
           Tags
         </h2>
@@ -86,8 +100,7 @@ export function AppSidebar({ onNewNote, isOpen = true, onClose }: AppSidebarProp
             </button>
           ))}
         </div>
-      </div>
+      </div> */}
     </aside>
   );
 }
-

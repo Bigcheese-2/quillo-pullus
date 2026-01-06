@@ -2,10 +2,6 @@ import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import type { Note } from '@/lib/types/note';
 import type { SyncOperation } from '@/lib/types/sync';
 
-/**
- * Database schema definition for IndexedDB.
- * This defines the structure of our notes store and sync operations store.
- */
 interface NotesDBSchema extends DBSchema {
   notes: {
     key: string;
@@ -26,35 +22,18 @@ interface NotesDBSchema extends DBSchema {
 }
 
 const DB_NAME = 'notes-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'notes';
 const SYNC_STORE_NAME = 'sync_operations';
 
 let dbInstance: IDBPDatabase<NotesDBSchema> | null = null;
 
-/**
- * Validates that a value is a non-empty string.
- * Used for input validation across all functions.
- * 
- * @param value - The value to validate
- * @param fieldName - The name of the field (for error messages)
- * @throws Error if value is invalid
- */
 function validateNonEmptyString(value: unknown, fieldName: string): asserts value is string {
   if (!value || typeof value !== 'string' || value.trim() === '') {
     throw new Error(`Invalid ${fieldName}: must be a non-empty string`);
   }
 }
 
-/**
- * Opens and returns the IndexedDB database connection.
- * Creates the database schema on first use.
- * 
- * If the connection fails, the cached instance is cleared so it can be retried.
- * 
- * @returns Promise resolving to the database instance
- * @throws Error if database cannot be opened (e.g., quota exceeded, blocked)
- */
 async function getDB(): Promise<IDBPDatabase<NotesDBSchema>> {
   if (dbInstance) {
     return dbInstance;
@@ -78,6 +57,10 @@ async function getDB(): Promise<IDBPDatabase<NotesDBSchema>> {
           syncStore.createIndex('status', 'status', { unique: false });
           syncStore.createIndex('queuedAt', 'queuedAt', { unique: false });
         }
+
+        // Migration for version 3: Initialize archived/deleted fields
+        // Note: Cannot create transactions inside upgrade callback, so migration
+        // is handled at runtime in getArchivedNotes and saveNote functions
       },
     });
 
@@ -128,26 +111,110 @@ export async function getAllNotes(): Promise<Note[]> {
  * Uses the user_id index for efficient querying.
  * 
  * @param userId - The user's email address (must not be empty)
+ * @param includeArchived - Whether to include archived notes (default: false)
+ * @param includeDeleted - Whether to include deleted notes (default: false)
  * @returns Promise resolving to an array of notes for the user (empty array if none found)
  * @throws Error if userId is invalid or database operation fails
  */
-export async function getNotesByUserId(userId: string): Promise<Note[]> {
+export async function getNotesByUserId(
+  userId: string,
+  includeArchived = false,
+  includeDeleted = false
+): Promise<Note[]> {
   validateNonEmptyString(userId, 'userId');
 
   try {
     const db = await getDB();
     const notes = await db.getAllFromIndex(STORE_NAME, 'user_id', userId);
     
-    notes.sort((a, b) => {
+    const filtered = notes.filter((note) => {
+      if (!includeDeleted && note.deleted === true) return false;
+      if (!includeArchived && note.archived === true && note.deleted !== true) return false;
+      return true;
+    });
+    
+    filtered.sort((a, b) => {
       const dateA = new Date(a.modified_at).getTime();
       const dateB = new Date(b.modified_at).getTime();
       return dateB - dateA;
     });
     
-    return notes;
+    return filtered;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to get notes for user: ${message}`);
+  }
+}
+
+/**
+ * Retrieves archived notes for a specific user.
+ * 
+ * @param userId - The user's email address
+ * @returns Promise resolving to an array of archived notes
+ */
+export async function getArchivedNotes(userId: string): Promise<Note[]> {
+  validateNonEmptyString(userId, 'userId');
+
+  try {
+    const db = await getDB();
+    const notes = await db.getAllFromIndex(STORE_NAME, 'user_id', userId);
+    
+    // Ensure all notes have archived/deleted fields initialized for filtering
+    // Only set undefined values in memory for filtering - do NOT write back to DB
+    // (saveNote already ensures these fields are set when saving)
+    for (const note of notes) {
+      if (note.archived === undefined) {
+        note.archived = false;
+      }
+      if (note.deleted === undefined) {
+        note.deleted = false;
+      }
+    }
+    
+    const archived = notes.filter((note) => {
+      const archivedValue = note.archived === true;
+      const notDeleted = note.deleted !== true;
+      return archivedValue && notDeleted;
+    });
+    
+    archived.sort((a, b) => {
+      const dateA = new Date(a.modified_at).getTime();
+      const dateB = new Date(b.modified_at).getTime();
+      return dateB - dateA;
+    });
+    
+    return archived;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to get archived notes: ${message}`);
+  }
+}
+
+/**
+ * Retrieves deleted (trash) notes for a specific user.
+ * 
+ * @param userId - The user's email address
+ * @returns Promise resolving to an array of deleted notes
+ */
+export async function getDeletedNotes(userId: string): Promise<Note[]> {
+  validateNonEmptyString(userId, 'userId');
+
+  try {
+    const db = await getDB();
+    const notes = await db.getAllFromIndex(STORE_NAME, 'user_id', userId);
+    
+    const deleted = notes.filter((note) => note.deleted);
+    
+    deleted.sort((a, b) => {
+      const dateA = new Date(a.modified_at).getTime();
+      const dateB = new Date(b.modified_at).getTime();
+      return dateB - dateA;
+    });
+    
+    return deleted;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to get deleted notes: ${message}`);
   }
 }
 
@@ -186,6 +253,14 @@ export async function saveNote(note: Note): Promise<Note> {
   validateNonEmptyString(note.id, 'note.id');
   validateNonEmptyString(note.user_id, 'note.user_id');
 
+  // Ensure archived and deleted fields are always set
+  if (note.archived === undefined) {
+    note.archived = false;
+  }
+  if (note.deleted === undefined) {
+    note.deleted = false;
+  }
+
   try {
     const db = await getDB();
     await db.put(STORE_NAME, note);
@@ -217,6 +292,14 @@ export async function saveNotes(notes: Note[]): Promise<Note[]> {
       throw new Error('Invalid note in array: must be an object');
     }
     validateNonEmptyString(note.id, 'note.id in array');
+    
+    // Ensure archived and deleted fields are always set (preserve existing values)
+    if (note.archived === undefined) {
+      note.archived = false;
+    }
+    if (note.deleted === undefined) {
+      note.deleted = false;
+    }
   }
 
   try {

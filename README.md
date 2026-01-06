@@ -6,7 +6,7 @@ A progressive web application for note-taking with offline-first capabilities, b
 
 Quillo is an offline-first PWA that allows users to create, edit, and delete notes seamlessly, whether online or offline. The application automatically synchronizes data when connectivity is restored.
 
-**Status**: Phase 3 Complete ✅ (Offline functionality fully implemented)
+**Status**: Phase 4 Complete ✅ (All features implemented including conflict resolution)
 
 ## Tech Stack
 
@@ -24,12 +24,15 @@ Quillo is an offline-first PWA that allows users to create, edit, and delete not
 - ✅ **Optimistic Updates**: Instant UI feedback
 - ✅ **Data Persistence**: IndexedDB storage survives browser restarts
 - ✅ **Sync Status UI**: Real-time sync state indicators
+- ✅ **Conflict Resolution**: Last-Write-Wins strategy for data consistency
+- ✅ **Error Handling**: Comprehensive error boundaries and user-friendly messages
+- ✅ **Search & Filter**: Real-time search with highlighting (works offline)
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20+ 
 - Supabase account
 
 ### Installation
@@ -71,10 +74,10 @@ npm start
 ### Setup
 
 1. Build and start in production mode:
-   ```bash
+```bash
    npm run build
-   npm start
-   ```
+npm start
+```
 
 2. Open Chrome/Edge and navigate to `http://localhost:3000`
 
@@ -144,32 +147,62 @@ User Action → IndexedDB (immediate) → UI Update (optimistic)
 
 - `lib/services/note-service.ts` - Offline-first service layer
 - `lib/services/sync-manager.ts` - Background sync with retry logic
+- `lib/services/conflict-resolver.ts` - Conflict detection and resolution
 - `lib/db/indexeddb.ts` - IndexedDB wrapper for local storage
 - `hooks/use-notes.ts` - React Query hooks with optimistic updates
 
-## Project Structure
+## Conflict Resolution Strategy
+
+### Overview
+
+When the same note is modified both locally (while offline) and on the server (by another device or session), a conflict occurs. Quillo uses a **Last-Write-Wins (LWW)** strategy to automatically resolve these conflicts.
+
+### How It Works
+
+1. **Conflict Detection**: During sync, the system compares the `modified_at` timestamp of local and server versions of each note.
+
+2. **Resolution**: The note with the most recent `modified_at` timestamp is chosen as the winner:
+   - If local version is newer → Local version wins
+   - If server version is newer → Server version wins
+   - If timestamps are equal → Server version wins (default)
+
+3. **Automatic Application**: The winning version is automatically saved to both IndexedDB and synced to the server.
+
+4. **User Notification**: Users receive a toast notification when conflicts are resolved, showing:
+   - Which note had a conflict
+   - Which version was kept (local or server)
+   - The resolution strategy used
+
+### When Conflicts Can Occur
+
+Conflicts can happen in these scenarios:
+
+1. **Multi-Device Editing**: User edits a note on Device A while offline, then edits the same note on Device B (online). When Device A comes online, both versions exist.
+
+2. **Network Interruption**: User starts editing a note online, network drops, user continues editing offline, then network returns while another session modified the same note.
+
+3. **Concurrent Sessions**: Multiple browser tabs/windows editing the same note simultaneously.
+
+### Example Scenario
 
 ```
-├── app/                    # Next.js app router
-├── components/
-│   ├── notes/            # Note management UI
-│   ├── sync/             # Sync status components
-│   └── ui/               # shadcn/ui components
-├── lib/
-│   ├── services/        # Business logic (note-service, sync-manager)
-│   ├── db/              # IndexedDB wrapper
-│   └── supabase/        # API client
-└── hooks/               # React hooks (use-notes, use-sync-status)
+Timeline:
+1. 10:00 AM - User edits "Meeting Notes" on laptop (offline)
+   → Local version: modified_at = "2024-01-15T10:00:00Z"
+
+2. 10:05 AM - User edits same note on phone (online)
+   → Server version: modified_at = "2024-01-15T10:05:00Z"
+
+3. 10:10 AM - Laptop comes online, sync begins
+   → Conflict detected: Server version is newer (10:05 > 10:00)
+   → Resolution: Server version wins
+   → User sees: "Conflict resolved for 'Meeting Notes': Server version was used (Last-Write-Wins)"
 ```
 
-## Code Quality
+### Implementation Details
 
-- ✅ TypeScript strict mode
-- ✅ JSDoc documentation
-- ✅ Comprehensive error handling
-- ✅ Production-ready (console statements dev-only)
-- ✅ No hardcoded secrets
+- **Conflict Detection**: Happens automatically during sync operations (`sync-manager.ts`)
+- **Resolution Logic**: Implemented in `lib/services/conflict-resolver.ts`
+- **User Feedback**: Toast notifications via `formatConflictMessage()`
+- **Tracking**: Conflicts are tracked and reported in sync status
 
-## License
-
-Private project for assessment purposes.

@@ -1,12 +1,14 @@
 import type { SyncOperation } from '@/lib/types/sync';
 import type { CreateNoteInput, UpdateNoteInput } from '@/lib/types/note';
 import * as noteAPI from './note-api';
+import { detectAndResolveConflict, formatConflictMessage, type Conflict } from './conflict-resolver';
 import {
   saveSyncOperation,
   getSyncOperations,
   deleteSyncOperation,
   getSyncOperationCount,
   saveNote,
+  getSyncOperationById,
 } from '@/lib/db/indexeddb';
 
 /**
@@ -45,7 +47,6 @@ function isBackgroundSyncSupported(): boolean {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
     return false;
   }
-  // Check if sync property exists on ServiceWorkerRegistration
   try {
     const registration = navigator.serviceWorker.ready;
     return 'sync' in ServiceWorkerRegistration.prototype;
@@ -71,15 +72,11 @@ function calculateBackoffDelay(retryCount: number): number {
  * @returns Promise resolving when operation is queued
  */
 export async function queueSyncOperation(operation: SyncOperation): Promise<void> {
-  // Save to IndexedDB for persistence
   await saveSyncOperation(operation);
 
-  // Register Background Sync if supported
-  // Note: Background Sync works even when offline - it will trigger when connection is restored
   if (isBackgroundSyncSupported()) {
     try {
       const registration = await navigator.serviceWorker.ready;
-      // TypeScript doesn't know about the sync property, so we need to cast
       const syncManager = (registration as unknown as { sync?: { register: (tag: string) => Promise<void> } }).sync;
       if (syncManager) {
         await syncManager.register(SYNC_TAG);
@@ -88,7 +85,6 @@ export async function queueSyncOperation(operation: SyncOperation): Promise<void
       if (process.env.NODE_ENV === 'development') {
         console.warn('Failed to register background sync:', error);
       }
-      // Continue anyway - we'll process the queue manually when online
     }
   }
 }
@@ -105,7 +101,6 @@ async function processSyncOperation(
   operation: SyncOperation,
   userId: string
 ): Promise<void> {
-  // Update status to syncing
   operation.status = 'syncing';
   await saveSyncOperation(operation);
 
@@ -122,8 +117,18 @@ async function processSyncOperation(
           throw new Error('Update operation missing noteId');
         }
         const updates = operation.noteData as UpdateNoteInput;
-        const syncedNote = await noteAPI.updateNote(operation.noteId, userId, updates);
-        await saveNote(syncedNote);
+        
+        try {
+          const syncedNote = await noteAPI.updateNote(operation.noteId, userId, updates);
+          await saveNote(syncedNote);
+        } catch (error) {
+          const conflict = await detectAndResolveConflict(operation.noteId, userId);
+          if (conflict) {
+            await saveNote(conflict.resolvedNote);
+            throw new Error(`Conflict resolved: ${formatConflictMessage(conflict)}`);
+          }
+          throw error;
+        }
         break;
       }
       case 'delete': {
@@ -137,25 +142,20 @@ async function processSyncOperation(
         throw new Error(`Unknown sync operation type: ${operation.type}`);
     }
 
-    // Mark as synced and remove from queue
     operation.status = 'synced';
     await deleteSyncOperation(operation.id);
   } catch (error) {
-    // Operation failed - update retry count and status
     operation.retryCount++;
     operation.status = 'failed';
     operation.error = error instanceof Error ? error.message : 'Unknown error';
 
     if (operation.retryCount >= MAX_RETRY_ATTEMPTS) {
-      // Max retries exceeded - keep in queue but mark as failed
       await saveSyncOperation(operation);
       throw new Error(`Operation failed after ${MAX_RETRY_ATTEMPTS} attempts: ${operation.error}`);
     } else {
-      // Retry later with exponential backoff
       operation.status = 'pending';
       await saveSyncOperation(operation);
       
-      // Schedule retry with exponential backoff
       const delay = calculateBackoffDelay(operation.retryCount);
       setTimeout(() => {
         processSyncOperation(operation, userId).catch((err) => {
@@ -175,43 +175,53 @@ async function processSyncOperation(
  * This is called when the app comes online or when Background Sync is triggered.
  * 
  * @param userId - The user's email address
- * @returns Promise resolving to the number of successfully synced operations
+ * @returns Promise resolving to sync result with count and conflicts
  */
-export async function processSyncQueue(userId: string): Promise<number> {
+export async function processSyncQueue(userId: string): Promise<{
+  syncedCount: number;
+  conflicts: Conflict[];
+}> {
   if (!isOnline()) {
-    return 0;
+    return { syncedCount: 0, conflicts: [] };
   }
 
-  // Get all pending operations
   const pendingOperations = await getSyncOperations('pending');
   
   if (pendingOperations.length === 0) {
-    return 0;
+    return { syncedCount: 0, conflicts: [] };
   }
 
   let syncedCount = 0;
   const errors: Error[] = [];
+  const conflicts: Conflict[] = [];
 
-  // Process operations sequentially to avoid overwhelming the server
   for (const operation of pendingOperations) {
     try {
       await processSyncOperation(operation, userId);
       syncedCount++;
     } catch (error) {
       const err = error instanceof Error ? error : new Error('Unknown error');
+      
+      if (err.message.includes('Conflict resolved')) {
+        const conflict = await detectAndResolveConflict(operation.noteId || '', userId);
+        if (conflict) {
+          conflicts.push(conflict);
+          syncedCount++;
+          continue;
+        }
+      }
+      
       errors.push(err);
-      // Continue processing other operations even if one fails
     }
   }
 
-  // Log any errors
   if (errors.length > 0) {
     if (process.env.NODE_ENV === 'development') {
       console.warn(`${errors.length} sync operations failed:`, errors);
     }
   }
 
-  return syncedCount;
+  return { syncedCount, conflicts };
 }
 
 /**
@@ -228,7 +238,6 @@ export async function getSyncStatus(): Promise<{
   const pendingCount = await getSyncOperationCount('pending');
   const failedCount = await getSyncOperationCount('failed');
   
-  // Get the most recently synced operation to find last sync time
   const allOperations = await getSyncOperations();
   const syncedOperations = allOperations.filter(op => op.status === 'synced');
   const lastSynced = syncedOperations.sort((a, b) => 
@@ -245,7 +254,6 @@ export async function getSyncStatus(): Promise<{
 
 /**
  * Gets all pending sync operations.
- * Useful for debugging or displaying sync status to users.
  * 
  * @returns Promise resolving to an array of pending operations
  */
@@ -285,7 +293,6 @@ export async function retrySyncOperation(
     throw new Error(`Operation ${operationId} is not in failed state`);
   }
 
-  // Reset operation to pending and retry
   operation.status = 'pending';
   operation.retryCount = 0;
   operation.error = undefined;
@@ -296,7 +303,6 @@ export async function retrySyncOperation(
 
 /**
  * Clears all synced operations from the queue.
- * This removes operations that have been successfully synced.
  * 
  * @returns Promise resolving to the number of cleared operations
  */

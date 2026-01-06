@@ -1,13 +1,3 @@
-/**
- * Service Worker Registration Utility
- * 
- * Handles service worker registration and lifecycle events.
- * Provides callbacks for service worker updates and installation.
- */
-
-/**
- * Callbacks for service worker events
- */
 interface ServiceWorkerCallbacks {
   onUpdateAvailable?: () => void;
   onInstalled?: () => void;
@@ -23,7 +13,6 @@ interface ServiceWorkerCallbacks {
 export async function registerServiceWorker(
   callbacks?: ServiceWorkerCallbacks
 ): Promise<ServiceWorkerRegistration | null> {
-  // Check if service workers are supported
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
     if (process.env.NODE_ENV === 'development') {
       console.warn('Service workers are not supported in this browser');
@@ -39,31 +28,24 @@ export async function registerServiceWorker(
   }
 
   try {
-    // Register the service worker
-    // next-pwa generates the service worker at /sw.js
     const registration = await navigator.serviceWorker.register('/sw.js', {
       scope: '/',
     });
 
-    // Handle service worker updates
     registration.addEventListener('updatefound', () => {
       const newWorker = registration.installing;
       if (!newWorker) return;
 
       newWorker.addEventListener('statechange', () => {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          // New service worker is available
           callbacks?.onUpdateAvailable?.();
         } else if (newWorker.state === 'installed') {
-          // Service worker installed for the first time
           callbacks?.onInstalled?.();
         }
       });
     });
 
-    // Listen for controller changes (when a new service worker takes control)
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      // Reload the page to use the new service worker
       window.location.reload();
     });
 
@@ -83,7 +65,6 @@ export async function registerServiceWorker(
 
 /**
  * Unregisters all service workers.
- * Useful for development or debugging.
  * 
  * @returns Promise resolving when unregistration is complete
  */

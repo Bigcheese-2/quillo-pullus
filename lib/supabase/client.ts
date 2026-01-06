@@ -23,7 +23,6 @@ export async function supabaseRequest<T>(
   const { method = "GET", body, headers = {} } = options;
   const url = `${SUPABASE_URL}${endpoint}`;
 
-  // Required headers per Supabase REST API spec
   const requestHeaders: Record<string, string> = {
     apikey: SUPABASE_ANON_KEY,
     Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
@@ -31,7 +30,6 @@ export async function supabaseRequest<T>(
     ...headers,
   };
 
-  // Return created/updated object in response (Supabase requirement)
   if (method === "POST" || method === "PATCH") {
     requestHeaders.Prefer = "return=representation";
   }
@@ -57,7 +55,6 @@ export async function supabaseRequest<T>(
       throw error;
     }
 
-    // DELETE returns 204 No Content (no body)
     if (method === "DELETE" && response.status === 204) {
       return undefined as T;
     }
@@ -65,7 +62,6 @@ export async function supabaseRequest<T>(
     const data = await response.json();
     return data as T;
   } catch (error) {
-    // Detect network failures (offline, CORS, DNS issues)
     if (error instanceof TypeError && error.message === "Failed to fetch") {
       const networkError = new Error(
         "Network error: Unable to connect to the server. Please check your internet connection."
@@ -78,7 +74,6 @@ export async function supabaseRequest<T>(
   }
 }
 
-// URL encode email addresses for query parameters (required for special characters)
 export function encodeUserId(userId: string): string {
   return encodeURIComponent(userId);
 }

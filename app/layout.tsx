@@ -3,6 +3,7 @@ import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { ServiceWorkerRegister } from "@/lib/sw/service-worker-register";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "sonner";
 
 const montserrat = Montserrat({
@@ -42,7 +43,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={montserrat.variable}>
       <body className={`${montserrat.className} antialiased`}>
-        <ServiceWorkerRegister />
+        <ErrorBoundary>
+          <ServiceWorkerRegister />
         <QueryProvider>{children}</QueryProvider>
         <Toaster
           position="top-right"
@@ -56,6 +58,7 @@ export default function RootLayout({
             },
           }}
         />
+        </ErrorBoundary>
       </body>
     </html>
   );

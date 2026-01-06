@@ -15,25 +15,18 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-/**
- * Props for the SyncStatus component.
- */
+            
 interface SyncStatusProps {
-  /**
-   * Additional CSS classes to apply to the container.
-   */
+  
   className?: string;
   
-  /**
-   * Whether to show the manual sync button.
-   * @default true
-   */
+
+  
   showSyncButton?: boolean;
   
-  /**
-   * Size variant for the component.
-   * @default 'default'
-   */
+  
+  
+  
   size?: 'sm' | 'default' | 'lg';
 }
 
@@ -56,9 +49,7 @@ export function SyncStatus({
 }: SyncStatusProps) {
   const { syncState, isSyncing, lastError, triggerSync } = useSyncStatus();
 
-  /**
-   * Handles manual sync trigger.
-   */
+  
   const handleSync = async () => {
     try {
       const syncedCount = await triggerSync();
@@ -73,9 +64,7 @@ export function SyncStatus({
     }
   };
 
-  /**
-   * Gets the status badge configuration based on sync state.
-   */
+  
   const getStatusConfig = () => {
     if (!syncState.isOnline) {
       return {
@@ -144,7 +133,6 @@ export function SyncStatus({
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      {/* Online/Offline Indicator */}
       <div className="flex items-center gap-1">
         {syncState.isOnline ? (
           <Wifi className={cn(iconSizes[size], 'text-green-600 dark:text-green-400')} />
@@ -153,7 +141,6 @@ export function SyncStatus({
         )}
       </div>
 
-      {/* Status Badge */}
       <Badge 
         variant={statusConfig.variant}
         className={cn(
@@ -173,7 +160,6 @@ export function SyncStatus({
         )}
       </Badge>
 
-      {/* Manual Sync Button */}
       {showSyncButton && syncState.isOnline && (
         <Button
           variant="outline"
@@ -196,7 +182,6 @@ export function SyncStatus({
         </Button>
       )}
 
-      {/* Error Display (if any) */}
       {lastError && (
         <span className={cn('text-xs text-destructive', sizeClasses[size])}>
           {lastError}

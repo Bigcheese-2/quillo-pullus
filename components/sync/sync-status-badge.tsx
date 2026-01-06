@@ -12,14 +12,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/**
- * Props for the SyncStatusBadge component.
- * A lightweight badge-only version of SyncStatus.
- */
+
 interface SyncStatusBadgeProps {
-  /**
-   * Additional CSS classes to apply.
-   */
+  
   className?: string;
   
   /**
@@ -29,13 +24,7 @@ interface SyncStatusBadgeProps {
   showCounts?: boolean;
 }
 
-/**
- * Lightweight sync status badge component.
- * Displays only the status indicator without the sync button.
- * Useful for compact UI areas like headers or sidebars.
- * 
- * @param props - Component props
- */
+
 export function SyncStatusBadge({ 
   className,
   showCounts = true,
@@ -51,7 +40,7 @@ export function SyncStatusBadge({
         icon: WifiOff,
         label: 'Offline',
         variant: 'outline' as const,
-        className: 'text-muted-foreground',
+        className: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600',
       };
     }
 
@@ -59,37 +48,37 @@ export function SyncStatusBadge({
       case 'synced':
         return {
           icon: CheckCircle2,
-          label: 'Synced',
+          label: 'up to date',
           variant: 'default' as const,
-          className: 'text-green-600 dark:text-green-400',
+          className: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700',
         };
       case 'syncing':
         return {
           icon: Loader2,
-          label: 'Syncing',
+          label: 'Syncing...',
           variant: 'secondary' as const,
-          className: 'text-blue-600 dark:text-blue-400 animate-spin',
+          className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700',
         };
       case 'pending':
         return {
           icon: Clock,
-          label: 'Pending',
+          label: syncState.pendingCount > 0 ? `${syncState.pendingCount} Pending` : 'Pending',
           variant: 'secondary' as const,
-          className: 'text-yellow-600 dark:text-yellow-400',
+          className: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700',
         };
       case 'failed':
         return {
           icon: AlertCircle,
-          label: 'Failed',
+          label: syncState.failedCount > 0 ? `${syncState.failedCount} Failed` : 'Failed',
           variant: 'destructive' as const,
-          className: 'text-red-600 dark:text-red-400',
+          className: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700',
         };
       default:
         return {
           icon: CheckCircle2,
           label: 'Unknown',
           variant: 'outline' as const,
-          className: 'text-muted-foreground',
+          className: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600',
         };
     }
   };
@@ -98,24 +87,22 @@ export function SyncStatusBadge({
   const StatusIcon = statusConfig.icon;
   const hasPendingOperations = syncState.pendingCount > 0 || syncState.failedCount > 0;
 
+  const iconClassName = statusConfig.className.includes('animate-spin') 
+    ? 'h-3.5 w-3.5' 
+    : 'h-3.5 w-3.5';
+
   return (
     <Badge 
       variant={statusConfig.variant}
       className={cn(
-        'flex items-center gap-1.5 text-xs',
+        'flex items-center gap-1.5 text-xs font-medium px-2.5 py-1',
+        'border',
         statusConfig.className,
         className
       )}
     >
-      <StatusIcon className="h-3 w-3" />
-      <span>{statusConfig.label}</span>
-      {showCounts && hasPendingOperations && (
-        <span className="ml-1">
-          ({syncState.pendingCount > 0 && `${syncState.pendingCount}`}
-          {syncState.pendingCount > 0 && syncState.failedCount > 0 && '/'}
-          {syncState.failedCount > 0 && `${syncState.failedCount}`})
-        </span>
-      )}
+      <StatusIcon className={iconClassName} />
+      <span className='text-xs'>{statusConfig.label}</span>
     </Badge>
   );
 }
