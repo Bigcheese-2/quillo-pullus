@@ -6,7 +6,7 @@ A progressive web application for note-taking with offline-first capabilities, b
 
 Quillo is an offline-first PWA that allows users to create, edit, and delete notes seamlessly, whether online or offline. The application automatically synchronizes data when connectivity is restored.
 
-**Status**: Phase 4 Complete ✅ (All features implemented including conflict resolution)
+
 
 ## Tech Stack
 
