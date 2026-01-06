@@ -1,7 +1,3 @@
-/**
- * Utility functions for note operations.
- */
-
 export function isOnline(): boolean {
   if (typeof navigator === 'undefined') {
     return false;

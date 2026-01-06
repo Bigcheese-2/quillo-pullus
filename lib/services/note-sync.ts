@@ -5,13 +5,6 @@ import {
 } from '@/lib/db/indexeddb';
 import { processSyncQueue } from './sync-manager';
 
-/**
- * Syncs notes from server to IndexedDB with conflict resolution.
- * Fetches all notes from server, resolves conflicts using Last-Write-Wins, and updates local storage.
- * 
- * @param userId - The user's email address
- * @returns Array of resolved conflicts (empty if no conflicts)
- */
 export async function syncFromServer(userId: string): Promise<import('./conflict-resolver').Conflict[]> {
   try {
     const { detectAndResolveAllConflicts } = await import('./conflict-resolver');
@@ -50,13 +43,6 @@ export async function syncFromServer(userId: string): Promise<import('./conflict
   }
 }
 
-/**
- * Processes all pending sync operations.
- * handles Background Sync API.
- * 
- * @param userId - The user's email address
- * @returns Promise resolving to the number of successfully synced operations
- */
 export async function syncPendingOperations(userId: string): Promise<number> {
   const result = await processSyncQueue(userId);
   return result.syncedCount;

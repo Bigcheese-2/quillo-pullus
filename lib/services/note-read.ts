@@ -8,13 +8,6 @@ import {
 import { syncFromServer } from './note-sync';
 import { isOnline } from './note-utils';
 
-/**
- * Retrieves all notes for a user (excluding archived and deleted).
- * Reads from IndexedDB immediately, then syncs with server in background if online.
- * 
- * @param userId - The user's email address
- * @returns Promise resolving to an array of active notes
- */
 export async function getAllNotes(userId: string): Promise<Note[]> {
   try {
     const localNotes = await getNotesByUserId(userId, false, false);
@@ -36,12 +29,6 @@ export async function getAllNotes(userId: string): Promise<Note[]> {
   }
 }
 
-/**
- * Retrieves archived notes for a user.
- * 
- * @param userId - The user's email address
- * @returns Promise resolving to an array of archived notes
- */
 export async function getArchivedNotes(userId: string): Promise<Note[]> {
   try {
     const notes = await getArchivedNotesFromDB(userId);
@@ -54,12 +41,6 @@ export async function getArchivedNotes(userId: string): Promise<Note[]> {
   }
 }
 
-/**
- * Retrieves deleted (trash) notes for a user.
- * 
- * @param userId - The user's email address
- * @returns Promise resolving to an array of deleted notes
- */
 export async function getDeletedNotes(userId: string): Promise<Note[]> {
   try {
     return await getDeletedNotesFromDB(userId);
@@ -71,14 +52,6 @@ export async function getDeletedNotes(userId: string): Promise<Note[]> {
   }
 }
 
-/**
- * Retrieves a single note by ID.
- * Reads from IndexedDB first, then syncs with server if online.
- * 
- * @param id - The note's unique identifier
- * @param userId - The user's email address
- * @returns Promise resolving to the note, or undefined if not found
- */
 export async function getNote(id: string, userId: string): Promise<Note | undefined> {
   const localNote = await getNoteById(id);
 

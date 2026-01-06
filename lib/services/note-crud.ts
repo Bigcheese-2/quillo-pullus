@@ -8,14 +8,6 @@ import {
 import { queueSyncOperation as queueSyncOp } from './sync-manager';
 import { isOnline, generateSyncId, generateUUID } from './note-utils';
 
-/**
- * Creates a new note.
- * Saves to IndexedDB immediately, then syncs with server if online.
- * If offline, queues the operation for later sync.
- * 
- * @param input - Note data (user_id, title, content)
- * @returns Promise resolving to the created note
- */
 export async function createNote(input: CreateNoteInput): Promise<Note> {
   const now = new Date().toISOString();
   const newNote: Note = {
@@ -61,17 +53,6 @@ export async function createNote(input: CreateNoteInput): Promise<Note> {
   }
 }
 
-/**
- * Updates an existing note.
- * Updates IndexedDB immediately, then syncs with server if online.
- * If offline, queues the operation for later sync.
- * 
- * @param id - The note's unique identifier
- * @param userId - The user's email address
- * @param updates - Partial note data to update
- * @returns Promise resolving to the updated note
- * @throws Error if note is not found locally
- */
 export async function updateNote(
   id: string,
   userId: string,
@@ -125,16 +106,6 @@ export async function updateNote(
   }
 }
 
-/**
- * Deletes a note.
- * Deletes from IndexedDB immediately, then syncs with server if online.
- * If offline, queues the operation for later sync.
- * 
- * @param id - The note's unique identifier
- * @param userId - The user's email address
- * @returns Promise resolving to void on success
- * @throws Error if note is not found locally
- */
 export async function deleteNote(id: string, userId: string): Promise<void> {
   const existingNote = await getNoteById(id);
   if (!existingNote) {
