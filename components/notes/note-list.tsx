@@ -11,14 +11,14 @@ import { Button } from "@/components/ui/button";
 interface NoteListProps {
   notes: Note[];
   selectedNoteId?: string;
-  onNoteSelect?: (noteId: string) => void;
+  onNoteSelect?: (noteId: string, e?: React.MouseEvent) => void;
   onNewNote?: () => void;
   className?: string;
   isLoading?: boolean;
   searchQuery?: string;
   isMultiSelectMode?: boolean;
   multiSelectedIds?: Set<string>;
-  onMultiSelectToggle?: (noteId: string) => void;
+  onMultiSelectToggle?: (noteId: string, e?: React.MouseEvent) => void;
 }
 
 export function NoteList({
