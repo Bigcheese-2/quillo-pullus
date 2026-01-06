@@ -264,7 +264,6 @@ export default function Home() {
         setSelectedNoteId(undefined);
       }
     } catch (error) {
-      // Error is handled by the mutation
     }
   };
   
@@ -277,7 +276,6 @@ export default function Home() {
         setSelectedNoteId(undefined);
       }
     } catch (error) {
-      // Error is handled by the mutation
     }
   };
 
@@ -285,7 +283,7 @@ export default function Home() {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center space-y-2">
-          <p className="text-accent">Quillo.</p>
+          <p className="text-accent text-3xl tracking-wider md:text-4xl lg:text-5xl">Quillo.</p>
         </div>
       </div>
     );
