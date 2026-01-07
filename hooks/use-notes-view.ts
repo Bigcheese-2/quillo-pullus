@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { getAllNotes, getArchivedNotes, getDeletedNotes } from '@/lib/services/note-service';
 import type { NoteView } from '@/lib/types/note';
 
@@ -24,7 +24,8 @@ export function useNotesView(view: NoteView = 'all') {
     queryKey: [NOTES_QUERY_KEY, userId],
     queryFn: async () => {
       try {
-        return await getAllNotes(userId);
+        const result = await getAllNotes(userId);
+        return result;
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.warn('Failed to get notes, trying local storage:', error);
@@ -45,21 +46,29 @@ export function useNotesView(view: NoteView = 'all') {
     gcTime: 24 * 60 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: true,
-    refetchOnMount: true,
+    refetchOnReconnect: false, // Changed: prevent refetch on reconnect to avoid loops
+    refetchOnMount: false, // Changed: prevent refetch on mount to avoid loops
     placeholderData: (previousData) => previousData,
     throwOnError: false,
   });
+
+  // Guard to prevent refetch loops - persists across re-renders
+  const isRefetchingRef = useRef(false);
 
   // Listen for sync completion events and refetch
   useEffect(() => {
     if (view !== 'all') return;
 
     const handleSyncComplete = (event: CustomEvent) => {
-      if (event.detail?.userId === userId) {
+      if (event.detail?.userId === userId && !isRefetchingRef.current) {
+        isRefetchingRef.current = true;
         // Refetch after a short delay to ensure IndexedDB is updated
         setTimeout(() => {
-          activeQuery.refetch();
+          activeQuery.refetch().finally(() => {
+            setTimeout(() => {
+              isRefetchingRef.current = false;
+            }, 1000);
+          });
         }, 100);
       }
     };
@@ -68,7 +77,7 @@ export function useNotesView(view: NoteView = 'all') {
     return () => {
       window.removeEventListener('notes-synced', handleSyncComplete as EventListener);
     };
-  }, [view, userId, activeQuery]);
+  }, [view, userId]);
 
   const archivedQuery = useQuery({
     queryKey: [ARCHIVED_QUERY_KEY, userId],

@@ -17,11 +17,6 @@ export async function getAllNotes(userId: string): Promise<Note[]> {
       try {
         await syncFromServer(userId);
         const syncedNotes = await getNotesByUserId(userId, false, false);
-        
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('notes-synced', { detail: { userId } }));
-        }
-        
         return syncedNotes;
       } catch (syncError) {
         if (process.env.NODE_ENV === 'development') {
@@ -31,20 +26,7 @@ export async function getAllNotes(userId: string): Promise<Note[]> {
       }
     }
     
-    if (localNotes.length > 0 && isOnline()) {
-      syncFromServer(userId)
-        .then(() => {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('notes-synced', { detail: { userId } }));
-          }
-        })
-        .catch((syncError) => {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Background sync failed, using local data:', syncError);
-          }
-        });
-    }
-    
+       
     return localNotes;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
