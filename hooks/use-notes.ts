@@ -83,20 +83,28 @@ export function useCreateNote() {
       return { previousNotes };
     },
     onSuccess: (data) => {
-      queryClient.setQueryData([NOTES_QUERY_KEY, userId], (old: Note[] | undefined) => {
-        if (!old) return [data];
-        const filtered = old.filter((note) => !note.id.startsWith('temp-'));
-        return [data, ...filtered];
-      });
+      queryClient.cancelQueries({ queryKey: [NOTES_QUERY_KEY, userId] });
       
-      const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
-      if (!isOnline) {
-        queryClient.setQueryData([NOTES_QUERY_KEY, userId], (old: Note[] | undefined) => {
-          if (!old) return [data];
-          const filtered = old.filter((note) => !note.id.startsWith('temp-'));
-          return [data, ...filtered];
+      const currentData = queryClient.getQueryData<Note[]>([NOTES_QUERY_KEY, userId]);
+      
+      let newData: Note[];
+      if (!currentData || currentData.length === 0) {
+        newData = [data];
+      } else {
+        const seenIds = new Set<string>();
+        seenIds.add(data.id);
+        
+        const filtered = currentData.filter((note) => {
+          if (note.id.startsWith('temp-')) return false;
+          if (seenIds.has(note.id)) return false;
+          seenIds.add(note.id);
+          return true;
         });
+        
+        newData = [data, ...filtered];
       }
+      
+      queryClient.setQueryData([NOTES_QUERY_KEY, userId], newData);
     },
     onError: (error, variables, context) => {
       if (context?.previousNotes) {
@@ -147,19 +155,15 @@ export function useUpdateNote() {
       return { previousNotes, previousNote };
     },
     onSuccess: (data) => {
+      queryClient.cancelQueries({ queryKey: [NOTES_QUERY_KEY, userId] });
+      queryClient.cancelQueries({ queryKey: [NOTE_QUERY_KEY, data.id, userId] });
+      
       queryClient.setQueryData([NOTES_QUERY_KEY, userId], (old: Note[] | undefined) => {
         if (!old) return [data];
         return old.map((note) => (note.id === data.id ? data : note));
       });
-      queryClient.setQueryData([NOTE_QUERY_KEY, data.id, userId], data);
       
-      const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
-      if (!isOnline) {
-        queryClient.setQueryData([NOTES_QUERY_KEY, userId], (old: Note[] | undefined) => {
-          if (!old) return [data];
-          return old.map((note) => (note.id === data.id ? data : note));
-        });
-      }
+      queryClient.setQueryData([NOTE_QUERY_KEY, data.id, userId], data);
     },
     onError: (error, variables, context) => {
       if (context?.previousNotes) {

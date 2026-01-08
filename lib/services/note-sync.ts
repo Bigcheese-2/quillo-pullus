@@ -7,7 +7,6 @@ import { processSyncQueue } from './sync-manager';
 
 export async function syncFromServer(userId: string): Promise<import('./conflict-resolver').Conflict[]> {
   try {
-    // Fetch notes from server once
     const serverNotes = await noteAPI.fetchAllNotes(userId);
     
     

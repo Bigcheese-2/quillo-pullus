@@ -21,7 +21,13 @@ export function useNotesView(view: NoteView = 'all') {
     queryKey: [NOTES_QUERY_KEY, userId],
     queryFn: async () => {
       const result = await getAllNotes(userId);
-      return result;
+      const seenIds = new Set<string>();
+      const deduplicated = result.filter((note) => {
+        if (seenIds.has(note.id)) return false;
+        seenIds.add(note.id);
+        return true;
+      });
+      return deduplicated;
     },
     enabled: view === 'all',
     staleTime: isOnline ? 0 : 5 * 60 * 1000,

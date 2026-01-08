@@ -52,11 +52,26 @@ function calculateBackoffDelay(retryCount: number): number {
 
 /**
  * Queues a sync operation to IndexedDB and registers Background Sync if supported.
+ * Prevents duplicate operations for the same noteId and type.
  * 
  * @param operation - The sync operation to queue
  * @returns Promise resolving when operation is queued
  */
 export async function queueSyncOperation(operation: SyncOperation): Promise<void> {
+  if (operation.noteId) {
+    const existingOperations = await getSyncOperations();
+    const duplicate = existingOperations.find(
+      (op) =>
+        op.noteId === operation.noteId &&
+        op.type === operation.type &&
+        (op.status === 'pending' || op.status === 'syncing')
+    );
+    
+    if (duplicate) {
+      return;
+    }
+  }
+  
   await saveSyncOperation(operation);
 
   if (typeof window !== 'undefined') {
@@ -87,14 +102,22 @@ async function processSyncOperation(
   operation: SyncOperation,
   userId: string
 ): Promise<void> {
-  operation.status = 'syncing';
-  await saveSyncOperation(operation);
+  if (operation.status !== 'syncing') {
+    operation.status = 'syncing';
+    await saveSyncOperation(operation);
+  }
 
   try {
     switch (operation.type) {
       case 'create': {
         const input = operation.noteData as CreateNoteInput;
         const syncedNote = await noteAPI.createNote(input);
+        
+        if (operation.noteId && operation.noteId !== syncedNote.id) {
+          const { deleteNote: deleteNoteFromDB } = await import('@/lib/db/indexeddb');
+          await deleteNoteFromDB(operation.noteId).catch(() => {});
+        }
+        
         await saveNote(syncedNote);
         break;
       }
@@ -160,6 +183,9 @@ async function processSyncOperation(
  * @param userId - The user's email address
  * @returns Promise resolving to sync result with count and conflicts
  */
+// Lock to prevent concurrent processing of the same queue
+let isProcessingQueue = false;
+
 export async function processSyncQueue(userId: string): Promise<{
   syncedCount: number;
   conflicts: Conflict[];
@@ -168,22 +194,33 @@ export async function processSyncQueue(userId: string): Promise<{
     return { syncedCount: 0, conflicts: [] };
   }
 
-  const pendingOperations = await getSyncOperations('pending');
-  
-  if (pendingOperations.length === 0) {
+  if (isProcessingQueue) {
     return { syncedCount: 0, conflicts: [] };
   }
 
-  let syncedCount = 0;
-  const errors: Error[] = [];
-  const conflicts: Conflict[] = [];
+  isProcessingQueue = true;
 
-  for (const operation of pendingOperations) {
-    try {
-      await processSyncOperation(operation, userId);
+  try {
+    const pendingOperations = await getSyncOperations('pending');
+    
+    if (pendingOperations.length === 0) {
+      return { syncedCount: 0, conflicts: [] };
+    }
+
+    for (const operation of pendingOperations) {
+      operation.status = 'syncing';
+      await saveSyncOperation(operation);
+    }
+
+    let syncedCount = 0;
+    const errors: Error[] = [];
+    const conflicts: Conflict[] = [];
+
+    for (const operation of pendingOperations) {
+      try {
+        await processSyncOperation(operation, userId);
       syncedCount++;
       
-      // Dispatch event when operation completes to update status immediately
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('sync-operation-completed'));
       }
@@ -196,7 +233,6 @@ export async function processSyncQueue(userId: string): Promise<{
           conflicts.push(conflict);
           syncedCount++;
           
-          // Dispatch event for conflict resolution too
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('sync-operation-completed'));
           }
@@ -206,19 +242,20 @@ export async function processSyncQueue(userId: string): Promise<{
       
       errors.push(err);
       
-      // Dispatch event when operation fails to update status
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('sync-operation-failed'));
       }
     }
   }
 
-  // Dispatch final event after all operations are processed
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('sync-queue-processed'));
   }
 
-  return { syncedCount, conflicts };
+    return { syncedCount, conflicts };
+  } finally {
+    isProcessingQueue = false;
+  }
 }
 
 /**

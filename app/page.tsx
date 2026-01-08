@@ -12,6 +12,7 @@ import { DeleteConfirmDialog } from "@/components/notes/delete-confirm-dialog";
 import { OfflineIndicator } from "@/components/sync/offline-indicator";
 import { useNotes, useCreateNote, useUpdateNote, useDeleteNote } from "@/hooks/use-notes";
 import { useNotesView } from "@/hooks/use-notes-view";
+import { useNoteCounts } from "@/hooks/use-note-counts";
 import { useNoteSearch } from "@/hooks/use-note-search";
 import { useArchiveNote, useUnarchiveNote, useTrashNote, useRestoreNote, useDeleteNotePermanently, useBulkArchiveNotes, useBulkTrashNotes, useBulkRestoreNotes, useBulkDeleteNotesPermanently } from "@/hooks/use-note-actions";
 import { useMultiSelect } from "@/hooks/use-multi-select";
@@ -26,6 +27,7 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<NoteView>('all');
 
   const { data: notes = [], isLoading, error, refetch } = useNotesView(currentView);
+  const noteCounts = useNoteCounts();
   const createNoteMutation = useCreateNote();
   const updateNoteMutation = useUpdateNote();
   const deleteNoteMutation = useDeleteNote();
@@ -313,6 +315,7 @@ export default function Home() {
         onClose={() => setSidebarOpen(false)}
         currentView={currentView}
         onViewChange={setCurrentView}
+        counts={noteCounts}
       />
 
       <div

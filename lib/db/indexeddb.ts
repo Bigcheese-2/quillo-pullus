@@ -59,8 +59,7 @@ async function getDB(): Promise<IDBPDatabase<NotesDBSchema>> {
         }
 
         // Migration for version 3: Initialize archived/deleted fields
-        // Note: Cannot create transactions inside upgrade callback, so migration
-        // is handled at runtime in getArchivedNotes and saveNote functions
+        // Migration is handled at runtime in getArchivedNotes and saveNote functions
       },
     });
 
@@ -159,9 +158,6 @@ export async function getArchivedNotes(userId: string): Promise<Note[]> {
     const db = await getDB();
     const notes = await db.getAllFromIndex(STORE_NAME, 'user_id', userId);
     
-    // Ensure all notes have archived/deleted fields initialized for filtering
-    // Only set undefined values in memory for filtering - do NOT write back to DB
-    // (saveNote already ensures these fields are set when saving)
     for (const note of notes) {
       if (note.archived === undefined) {
         note.archived = false;

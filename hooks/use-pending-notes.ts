@@ -42,13 +42,41 @@ export function usePendingNotes(): Set<string> {
       }
     }
 
+    // Fetch immediately on mount
     fetchPendingNotes();
 
+    // Listen to sync operation events for immediate updates
+    const handleSyncQueued = () => {
+      if (mounted) {
+        fetchPendingNotes();
+      }
+    };
+
+    const handleSyncCompleted = () => {
+      if (mounted) {
+        fetchPendingNotes();
+      }
+    };
+
+    const handleSyncFailed = () => {
+      if (mounted) {
+        fetchPendingNotes();
+      }
+    };
+
+    window.addEventListener('sync-operation-queued', handleSyncQueued);
+    window.addEventListener('sync-operation-completed', handleSyncCompleted);
+    window.addEventListener('sync-operation-failed', handleSyncFailed);
+
+    // Poll every 2 seconds as a fallback
     const interval = setInterval(fetchPendingNotes, 2000);
 
     return () => {
       mounted = false;
       clearInterval(interval);
+      window.removeEventListener('sync-operation-queued', handleSyncQueued);
+      window.removeEventListener('sync-operation-completed', handleSyncCompleted);
+      window.removeEventListener('sync-operation-failed', handleSyncFailed);
     };
   }, []);
 

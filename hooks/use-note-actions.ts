@@ -56,7 +56,6 @@ export function useArchiveNote() {
     onSuccess: async (archivedNote) => {
       await queryClient.invalidateQueries({ queryKey: [NOTES_QUERY_KEY, userId] });
       
-      // Ensure the archived note is in the cache
       const currentArchived = queryClient.getQueryData<Note[]>([ARCHIVED_QUERY_KEY, userId]) ?? [];
       const existsInCache = currentArchived.some(n => n.id === archivedNote.id);
       if (!existsInCache) {

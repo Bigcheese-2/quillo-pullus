@@ -10,13 +10,8 @@ interface SidebarItem {
   icon: React.ReactNode;
   label: string;
   view: NoteView;
+  count?: number;
 }
-
-const navigationItems: SidebarItem[] = [
-  { icon: <Clock className="w-4 h-4" />, label: "All Notes", view: "all" },
-  { icon: <Archive className="w-4 h-4" />, label: "Archive", view: "archived" },
-  { icon: <Trash2 className="w-4 h-4" />, label: "Trash", view: "trash" },
-];
 
 interface AppSidebarProps {
   onNewNote?: () => void;
@@ -24,6 +19,11 @@ interface AppSidebarProps {
   onClose?: () => void;
   currentView?: NoteView;
   onViewChange?: (view: NoteView) => void;
+  counts?: {
+    all: number;
+    archived: number;
+    trash: number;
+  };
 }
 
 export function AppSidebar({ 
@@ -32,11 +32,33 @@ export function AppSidebar({
   onClose,
   currentView = 'all',
   onViewChange,
+  counts,
 }: AppSidebarProps) {
   const handleViewClick = (view: NoteView) => {
     onViewChange?.(view);
     onClose?.();
   };
+
+  const navigationItems: SidebarItem[] = [
+    { 
+      icon: <Clock className="w-4 h-4" />, 
+      label: "All Notes", 
+      view: "all",
+      count: counts?.all,
+    },
+    { 
+      icon: <Archive className="w-4 h-4" />, 
+      label: "Archive", 
+      view: "archived",
+      count: counts?.archived,
+    },
+    { 
+      icon: <Trash2 className="w-4 h-4" />, 
+      label: "Trash", 
+      view: "trash",
+      count: counts?.trash,
+    },
+  ];
 
   return (
     <aside
@@ -73,14 +95,26 @@ export function AppSidebar({
             key={item.view}
             onClick={() => handleViewClick(item.view)}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+              "w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
               currentView === item.view
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
-            {item.icon}
-            <span>{item.label}</span>
+            <div className="flex items-center gap-3">
+              {item.icon}
+              <span>{item.label}</span>
+            </div>
+            {item.count !== undefined && (
+              <span className={cn(
+                "text-xs font-medium px-1.5 py-0.5 rounded",
+                currentView === item.view
+                  ? "bg-background/50 text-foreground"
+                  : "bg-muted-foreground/20 text-muted-foreground"
+              )}>
+                {item.count}
+              </span>
+            )}
           </button>
         ))}
       </nav>
