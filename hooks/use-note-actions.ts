@@ -14,18 +14,11 @@ import {
   deleteNotesPermanently,
 } from '@/lib/services/note-service';
 import type { Note } from '@/lib/types/note';
+import { getUserId } from '@/lib/config/env';
 
 const NOTES_QUERY_KEY = 'notes';
 const ARCHIVED_QUERY_KEY = 'archived-notes';
 const DELETED_QUERY_KEY = 'deleted-notes';
-
-function getUserId(): string {
-  const userId = process.env.NEXT_PUBLIC_USER_ID;
-  if (!userId) {
-    throw new Error('NEXT_PUBLIC_USER_ID is not set in environment variables');
-  }
-  return userId;
-}
 
 export function useArchiveNote() {
   const queryClient = useQueryClient();

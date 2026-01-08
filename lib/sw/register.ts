@@ -1,3 +1,4 @@
+
 interface ServiceWorkerCallbacks {
   onUpdateAvailable?: () => void;
   onInstalled?: () => void;
@@ -14,16 +15,10 @@ export async function registerServiceWorker(
   callbacks?: ServiceWorkerCallbacks
 ): Promise<ServiceWorkerRegistration | null> {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Service workers are not supported in this browser');
-    }
     return null;
   }
 
   if (!window.isSecureContext) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Service workers require a secure context (HTTPS or localhost)');
-    }
     return null;
   }
 
@@ -49,15 +44,9 @@ export async function registerServiceWorker(
       window.location.reload();
     });
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Service worker registered successfully');
-    }
     return registration;
   } catch (error) {
     const err = error instanceof Error ? error : new Error('Unknown error');
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Service worker registration failed:', err);
-    }
     callbacks?.onError?.(err);
     return null;
   }
@@ -76,13 +65,7 @@ export async function unregisterServiceWorkers(): Promise<void> {
   try {
     const registrations = await navigator.serviceWorker.getRegistrations();
     await Promise.all(registrations.map((registration) => registration.unregister()));
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Service workers unregistered');
-    }
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to unregister service workers:', error);
-    }
   }
 }
 
@@ -111,9 +94,6 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
   try {
     return await navigator.serviceWorker.ready;
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to get service worker registration:', error);
-    }
     return null;
   }
 }

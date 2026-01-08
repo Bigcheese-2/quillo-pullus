@@ -102,9 +102,6 @@ export async function detectAndResolveAllConflicts(
     const serverNotes = await noteAPI.fetchAllNotes(userId);
     return detectAndResolveAllConflictsWithNotes(userId, serverNotes);
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to detect conflicts:', error);
-    }
     return [];
   }
 }
@@ -160,9 +157,6 @@ export async function detectAndResolveAllConflictsWithNotes(
 
     return conflicts;
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to detect conflicts:', error);
-    }
     return [];
   }
 }

@@ -9,33 +9,24 @@ import {
   deleteNote,
 } from "@/lib/services/note-service";
 import type { Note, CreateNoteInput, UpdateNoteInput } from "@/lib/types/note";
+import { getUserId } from "@/lib/config/env";
 
 const NOTES_QUERY_KEY = "notes";
 const NOTE_QUERY_KEY = "note";
 
-function getUserId(): string {
-  const userId = process.env.NEXT_PUBLIC_USER_ID;
-  if (!userId) {
-    throw new Error("NEXT_PUBLIC_USER_ID is not set in environment variables");
-  }
-  return userId;
-}
-
 export function useNotes() {
-  const userId = getUserId();
 
+  const userId = getUserId();
   return useQuery({
     queryKey: [NOTES_QUERY_KEY, userId],
     queryFn: async () => {
       try {
         return await getAllNotes(userId);
       } catch (error) {
-        console.warn('Failed to get notes, trying local storage:', error);
         try {
           const { getNotesByUserId } = await import('@/lib/db/indexeddb');
           return await getNotesByUserId(userId);
         } catch (dbError) {
-          console.error('Failed to get notes from IndexedDB:', dbError);
           return [];
         }
       }
@@ -53,7 +44,6 @@ export function useNotes() {
 
 export function useNote(id: string) {
   const userId = getUserId();
-
   return useQuery({
     queryKey: [NOTE_QUERY_KEY, id, userId],
     queryFn: () => getNote(id, userId),
@@ -98,13 +88,19 @@ export function useCreateNote() {
         const filtered = old.filter((note) => !note.id.startsWith('temp-'));
         return [data, ...filtered];
       });
+      
+      const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      if (!isOnline) {
+        queryClient.setQueryData([NOTES_QUERY_KEY, userId], (old: Note[] | undefined) => {
+          if (!old) return [data];
+          const filtered = old.filter((note) => !note.id.startsWith('temp-'));
+          return [data, ...filtered];
+        });
+      }
     },
     onError: (error, variables, context) => {
       if (context?.previousNotes) {
         queryClient.setQueryData([NOTES_QUERY_KEY, userId], context.previousNotes);
-      }
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Create note error (note is saved locally):', error);
       }
       queryClient.invalidateQueries({ queryKey: [NOTES_QUERY_KEY, userId] });
     },
@@ -156,6 +152,14 @@ export function useUpdateNote() {
         return old.map((note) => (note.id === data.id ? data : note));
       });
       queryClient.setQueryData([NOTE_QUERY_KEY, data.id, userId], data);
+      
+      const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      if (!isOnline) {
+        queryClient.setQueryData([NOTES_QUERY_KEY, userId], (old: Note[] | undefined) => {
+          if (!old) return [data];
+          return old.map((note) => (note.id === data.id ? data : note));
+        });
+      }
     },
     onError: (error, variables, context) => {
       if (context?.previousNotes) {
@@ -163,9 +167,6 @@ export function useUpdateNote() {
       }
       if (context?.previousNote) {
         queryClient.setQueryData([NOTE_QUERY_KEY, variables.id, userId], context.previousNote);
-      }
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Update note error (note is updated locally):', error);
       }
       queryClient.invalidateQueries({ queryKey: [NOTES_QUERY_KEY, userId] });
     },
@@ -205,9 +206,6 @@ export function useDeleteNote() {
       }
       if (context?.previousNote) {
         queryClient.setQueryData([NOTE_QUERY_KEY, id, userId], context.previousNote);
-      }
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Delete note error (note is deleted locally):', error);
       }
       queryClient.invalidateQueries({ queryKey: [NOTES_QUERY_KEY, userId] });
     },

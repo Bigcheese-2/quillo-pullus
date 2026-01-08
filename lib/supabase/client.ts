@@ -1,12 +1,4 @@
-// Environment variables validated at module load time
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error(
-    "Missing Supabase environment variables. Please check your .env.local file."
-  );
-}
+import { getSupabaseUrl, getSupabaseAnonKey } from '@/lib/config/env';
 
 type RequestMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
@@ -21,11 +13,13 @@ export async function supabaseRequest<T>(
   options: RequestOptions = {}
 ): Promise<T> {
   const { method = "GET", body, headers = {} } = options;
-  const url = `${SUPABASE_URL}${endpoint}`;
+  const supabaseUrl = getSupabaseUrl();
+  const supabaseAnonKey = getSupabaseAnonKey();
+  const url = `${supabaseUrl}${endpoint}`;
 
   const requestHeaders: Record<string, string> = {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    apikey: supabaseAnonKey,
+    Authorization: `Bearer ${supabaseAnonKey}`,
     "Content-Type": "application/json",
     ...headers,
   };

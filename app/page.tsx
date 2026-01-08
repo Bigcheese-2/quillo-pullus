@@ -20,6 +20,7 @@ import { Note, NoteView } from "@/lib/types/note";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { getUserId } from "@/lib/config/env";
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<NoteView>('all');
@@ -137,14 +138,7 @@ export default function Home() {
   };
 
   const handleNoteSubmit = async (data: { title: string; content: string }) => {
-    const userId = process.env.NEXT_PUBLIC_USER_ID;
-
-    if (!userId) {
-      toast.error("Configuration Error", {
-        description: "User ID is not configured.",
-      });
-      return;
-    }
+    const userId = getUserId();
 
     if (editingNote) {
       try {
@@ -161,9 +155,6 @@ export default function Home() {
           description: "Your changes have been saved locally and will sync when online.",
         });
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error("Failed to update note:", error);
-        }
         toast.error("Failed to update note", {
           description: error instanceof Error ? error.message : "An unknown error occurred",
         });
@@ -181,9 +172,6 @@ export default function Home() {
           description: "Your new note has been saved locally and will sync when online.",
         });
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error("Failed to create note:", error);
-        }
         toast.error("Failed to create note", {
           description: error instanceof Error ? error.message : "An unknown error occurred",
         });
@@ -201,9 +189,6 @@ export default function Home() {
         }
         setDeletingNote(undefined);
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error("Failed to delete note:", error);
-        }
       }
     }
   };

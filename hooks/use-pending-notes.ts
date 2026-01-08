@@ -39,9 +39,6 @@ export function usePendingNotes(): Set<string> {
 
         setPendingNoteIds(noteIds);
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to fetch pending notes:', error);
-        }
       }
     }
 

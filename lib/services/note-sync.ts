@@ -34,9 +34,6 @@ export async function syncFromServer(userId: string): Promise<import('./conflict
     
     return conflicts;
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Failed to sync from server:', error);
-    }
     throw error; 
   }
 }

@@ -22,23 +22,23 @@ export async function createNote(input: CreateNoteInput): Promise<Note> {
   await saveNote(newNote);
 
   if (isOnline()) {
-    try {
-      const syncedNote = await noteAPI.createNote(input);
-      await deleteNoteFromDB(newNote.id);
-      await saveNote(syncedNote);
-      return syncedNote;
-    } catch (error) {
-      await queueSyncOp({
-        id: generateSyncId(),
-        type: 'create',
-        noteId: newNote.id,
-        noteData: input,
-        status: 'pending',
-        queuedAt: now,
-        retryCount: 0,
+    noteAPI.createNote(input)
+      .then(async (syncedNote) => {
+        await deleteNoteFromDB(newNote.id);
+        await saveNote(syncedNote);
+      })
+      .catch(async (error) => {
+        await queueSyncOp({
+          id: generateSyncId(),
+          type: 'create',
+          noteId: newNote.id,
+          noteData: input,
+          status: 'pending',
+          queuedAt: now,
+          retryCount: 0,
+        });
       });
-      return newNote;
-    }
+    return newNote;
   } else {
     await queueSyncOp({
       id: generateSyncId(),
@@ -76,22 +76,22 @@ export async function updateNote(
   await saveNote(updatedNote);
 
   if (isOnline()) {
-    try {
-      const syncedNote = await noteAPI.updateNote(id, userId, updates);
-      await saveNote(syncedNote);
-      return syncedNote;
-    } catch (error) {
-      await queueSyncOp({
-        id: generateSyncId(),
-        type: 'update',
-        noteId: id,
-        noteData: updates,
-        status: 'pending',
-        queuedAt: new Date().toISOString(),
-        retryCount: 0,
+    noteAPI.updateNote(id, userId, updates)
+      .then(async (syncedNote) => {
+        await saveNote(syncedNote);
+      })
+      .catch(async (error) => {
+        await queueSyncOp({
+          id: generateSyncId(),
+          type: 'update',
+          noteId: id,
+          noteData: updates,
+          status: 'pending',
+          queuedAt: new Date().toISOString(),
+          retryCount: 0,
+        });
       });
-      return updatedNote;
-    }
+    return updatedNote;
   } else {
     await queueSyncOp({
       id: generateSyncId(),

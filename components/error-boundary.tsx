@@ -4,6 +4,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { isDevelopment } from '@/lib/config/env';
 
 interface Props {
   children: ReactNode;
@@ -37,9 +38,6 @@ export class ErrorBoundary extends Component<Props, State> {
       this.props.onError(error, errorInfo);
     }
 
-    if (process.env.NODE_ENV === 'development') {
-      console.error('ErrorBoundary caught an error:', error, errorInfo);
-    }
   }
 
   handleReset = (): void => {
@@ -88,7 +86,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   Reload Page
                 </Button>
               </div>
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {isDevelopment() && this.state.error && (
                 <details className="mt-4">
                   <summary className="cursor-pointer text-sm text-muted-foreground">
                     Error Details (Development Only)

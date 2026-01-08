@@ -9,40 +9,41 @@ import { syncFromServer } from './note-sync';
 import { isOnline } from './note-utils';
 
 export async function getAllNotes(userId: string): Promise<Note[]> {
-  try {
-    const localNotes = await getNotesByUserId(userId, false, false);
-    
-    // If IndexedDB is empty and we're online, fetch from server (new browser case)
-    if (localNotes.length === 0 && isOnline()) {
+  // Check online status FIRST
+  const online = isOnline();
+  
+  if (online) {
+    try {
+      // If online, ALWAYS fetch from backend first to get latest data
+      // This is critical for:
+      // 1. New browsers where IndexedDB is empty
+      // 2. Getting latest changes from other devices
+      // This will make the API call to Supabase
+      await syncFromServer(userId);
+      // After sync, get notes from IndexedDB (which now has latest data)
+      const syncedNotes = await getNotesByUserId(userId, false, false);
+      return syncedNotes;
+    } catch (error) {
+      // If backend fails, fallback to IndexedDB
+      // This handles cases where API is down but user has local data
       try {
-        await syncFromServer(userId);
-        const syncedNotes = await getNotesByUserId(userId, false, false);
-        return syncedNotes;
-      } catch (syncError) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Failed to sync from server on initial load:', syncError);
-        }
+        const localNotes = await getNotesByUserId(userId, false, false);
+        return localNotes;
+      } catch (dbError) {
+        // Both backend and IndexedDB failed - return empty array
+        // This is fine for new users with no data yet
         return [];
       }
     }
-    
-       
-    return localNotes;
-  } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to get notes from IndexedDB:', error);
+  } else {
+    // If offline, load from IndexedDB
+    // For new browsers offline, this will return empty array (expected)
+    try {
+      const localNotes = await getNotesByUserId(userId, false, false);
+      return localNotes;
+    } catch (error) {
+      return [];
     }
-    if (isOnline()) {
-      try {
-        await syncFromServer(userId);
-        return await getNotesByUserId(userId, false, false);
-      } catch (syncError) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Failed to sync from server as fallback:', syncError);
-        }
-      }
-    }
-    return [];
   }
 }
 
@@ -51,9 +52,6 @@ export async function getArchivedNotes(userId: string): Promise<Note[]> {
     const notes = await getArchivedNotesFromDB(userId);
     return notes;
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to get archived notes:', error);
-    }
     return [];
   }
 }
@@ -62,9 +60,6 @@ export async function getDeletedNotes(userId: string): Promise<Note[]> {
   try {
     return await getDeletedNotesFromDB(userId);
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to get deleted notes:', error);
-    }
     return [];
   }
 }
@@ -73,10 +68,7 @@ export async function getNote(id: string, userId: string): Promise<Note | undefi
   const localNote = await getNoteById(id);
 
   if (isOnline() && localNote) {
-    syncFromServer(userId).catch((error) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Background sync failed:', error);
-      }
+    syncFromServer(userId).catch(() => {
     });
   }
 

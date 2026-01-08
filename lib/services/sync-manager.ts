@@ -59,6 +59,10 @@ function calculateBackoffDelay(retryCount: number): number {
 export async function queueSyncOperation(operation: SyncOperation): Promise<void> {
   await saveSyncOperation(operation);
 
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('sync-operation-queued'));
+  }
+
   if (isBackgroundSyncSupported()) {
     try {
       const registration = await navigator.serviceWorker.ready;
@@ -67,9 +71,6 @@ export async function queueSyncOperation(operation: SyncOperation): Promise<void
         await syncManager.register(SYNC_TAG);
       }
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Failed to register background sync:', error);
-      }
     }
   }
 }
@@ -143,10 +144,7 @@ async function processSyncOperation(
       
       const delay = calculateBackoffDelay(operation.retryCount);
       setTimeout(() => {
-        processSyncOperation(operation, userId).catch((err) => {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('Retry failed:', err);
-          }
+        processSyncOperation(operation, userId).catch(() => {
         });
       }, delay);
       
@@ -184,6 +182,11 @@ export async function processSyncQueue(userId: string): Promise<{
     try {
       await processSyncOperation(operation, userId);
       syncedCount++;
+      
+      // Dispatch event when operation completes to update status immediately
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sync-operation-completed'));
+      }
     } catch (error) {
       const err = error instanceof Error ? error : new Error('Unknown error');
       
@@ -192,18 +195,27 @@ export async function processSyncQueue(userId: string): Promise<{
         if (conflict) {
           conflicts.push(conflict);
           syncedCount++;
+          
+          // Dispatch event for conflict resolution too
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('sync-operation-completed'));
+          }
           continue;
         }
       }
       
       errors.push(err);
+      
+      // Dispatch event when operation fails to update status
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sync-operation-failed'));
+      }
     }
   }
 
-  if (errors.length > 0) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn(`${errors.length} sync operations failed:`, errors);
-    }
+  // Dispatch final event after all operations are processed
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('sync-queue-processed'));
   }
 
   return { syncedCount, conflicts };

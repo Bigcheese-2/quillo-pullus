@@ -84,9 +84,6 @@ export async function createNote(note: CreateNoteInput): Promise<Note> {
     const createdNote = Array.isArray(response) ? response[0] : response;
 
     if (!createdNote || !createdNote.id) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error("Invalid create note response:", response);
-      }
       throw new Error("Failed to create note: Invalid response from server");
     }
 

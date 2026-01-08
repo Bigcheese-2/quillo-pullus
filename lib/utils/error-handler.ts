@@ -1,3 +1,5 @@
+import { isDevelopment } from '@/lib/config/env';
+
 export enum ErrorType {
   NETWORK = 'NETWORK',
   API = 'API',
@@ -122,24 +124,9 @@ export function getUserFriendlyMessage(error: AppError): string {
 
 
 export function logError(error: AppError, context?: string): void {
-  if (process.env.NODE_ENV !== 'development') {
+  if (!isDevelopment()) {
     return;
   }
-
-  const contextMsg = context ? `[${context}] ` : '';
-  const errorMsg = `${contextMsg}${error.type}: ${error.message}`;
-
-  switch (error.type) {
-    case ErrorType.NETWORK:
-    case ErrorType.API:
-      console.warn(errorMsg, error.originalError);
-      break;
-    case ErrorType.INDEXEDDB:
-    case ErrorType.VALIDATION:
-      console.error(errorMsg, error.originalError);
-      break;
-    default:
-      console.error(errorMsg, error.originalError);
-  }
+  // Console logging removed
 }
 

@@ -5,15 +5,9 @@ import { toast } from 'sonner';
 import { getSyncStatus, processSyncQueue } from '@/lib/services/sync-manager';
 import { formatConflictMessage } from '@/lib/services/conflict-resolver';
 import type { SyncState } from '@/lib/types/sync';
+import { getUserId } from '@/lib/config/env';
 
 const SYNC_STATUS_POLL_INTERVAL = 2000;
-
-function getUserId(): string {
-  if (typeof window === 'undefined') {
-    return 'user@example.com';
-  }
-  return process.env.NEXT_PUBLIC_USER_ID || 'user@example.com';
-}
 
 export function useSyncStatus() {
   const [syncState, setSyncState] = useState<SyncState>({
@@ -26,7 +20,6 @@ export function useSyncStatus() {
   const [lastError, setLastError] = useState<string | null>(null);
   const isSyncingRef = useRef(isSyncing);
 
-  // Keep ref in sync with state
   useEffect(() => {
     isSyncingRef.current = isSyncing;
   }, [isSyncing]);
@@ -48,9 +41,6 @@ export function useSyncStatus() {
         lastSyncedAt: status.lastSyncedAt,
       });
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Failed to update sync state:', error);
-      }
       setLastError(error instanceof Error ? error.message : 'Unknown error');
     }
   }, []);
@@ -92,15 +82,28 @@ export function useSyncStatus() {
 
     const interval = setInterval(updateSyncState, SYNC_STATUS_POLL_INTERVAL);
 
+    const handleSyncQueued = () => {
+      updateSyncState();
+    };
+
+    const handleSyncCompleted = () => {
+      updateSyncState();
+    };
+
+    const handleSyncFailed = () => {
+      updateSyncState();
+    };
+
+    const handleQueueProcessed = () => {
+      updateSyncState();
+    };
+
     const handleOnline = async () => {
       await updateSyncState();
      
       const status = await getSyncStatus();
       if (status.pendingCount > 0) {
-        triggerSync().catch((error) => {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('Auto-sync failed:', error);
-          }
+        triggerSync().catch(() => {
         });
       }
     };
@@ -109,11 +112,19 @@ export function useSyncStatus() {
       updateSyncState();
     };
 
+    window.addEventListener('sync-operation-queued', handleSyncQueued);
+    window.addEventListener('sync-operation-completed', handleSyncCompleted);
+    window.addEventListener('sync-operation-failed', handleSyncFailed);
+    window.addEventListener('sync-queue-processed', handleQueueProcessed);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
       clearInterval(interval);
+      window.removeEventListener('sync-operation-queued', handleSyncQueued);
+      window.removeEventListener('sync-operation-completed', handleSyncCompleted);
+      window.removeEventListener('sync-operation-failed', handleSyncFailed);
+      window.removeEventListener('sync-queue-processed', handleQueueProcessed);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };

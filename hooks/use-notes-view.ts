@@ -1,68 +1,98 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getAllNotes, getArchivedNotes, getDeletedNotes } from '@/lib/services/note-service';
 import type { NoteView } from '@/lib/types/note';
+import { getUserId } from '@/lib/config/env';
 
 const NOTES_QUERY_KEY = 'notes';
 const ARCHIVED_QUERY_KEY = 'archived-notes';
 const DELETED_QUERY_KEY = 'deleted-notes';
 
-function getUserId(): string {
-  const userId = process.env.NEXT_PUBLIC_USER_ID;
-  if (!userId) {
-    throw new Error('NEXT_PUBLIC_USER_ID is not set in environment variables');
-  }
-  return userId;
-}
-
 export function useNotesView(view: NoteView = 'all') {
   const userId = getUserId();
+
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
 
   const activeQuery = useQuery({
     queryKey: [NOTES_QUERY_KEY, userId],
     queryFn: async () => {
-      try {
-        const result = await getAllNotes(userId);
-        return result;
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Failed to get notes, trying local storage:', error);
-        }
-        try {
-          const { getNotesByUserId } = await import('@/lib/db/indexeddb');
-          return await getNotesByUserId(userId, false, false);
-        } catch (dbError) {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('Failed to get notes from IndexedDB:', dbError);
-          }
-          return [];
-        }
-      }
+      const result = await getAllNotes(userId);
+      return result;
     },
     enabled: view === 'all',
-    staleTime: 2 * 60 * 1000,
+    staleTime: isOnline ? 0 : 5 * 60 * 1000,
     gcTime: 24 * 60 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false, // Changed: prevent refetch on reconnect to avoid loops
-    refetchOnMount: false, // Changed: prevent refetch on mount to avoid loops
-    placeholderData: (previousData) => previousData,
+    refetchOnReconnect: false,
+    refetchOnMount: isOnline ? 'always' : false,
     throwOnError: false,
+    placeholderData: (previousData) => !isOnline ? previousData : undefined,
   });
 
-  // Guard to prevent refetch loops - persists across re-renders
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (view === 'all' && isOnline) {
+      const timeoutId = setTimeout(() => {
+        activeQuery.refetch({ cancelRefetch: false });
+      }, 50);
+      return () => clearTimeout(timeoutId);
+    }
+  }, []);
+
   const isRefetchingRef = useRef(false);
 
-  // Listen for sync completion events and refetch
+  useEffect(() => {
+    if (view !== 'all') return;
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      if (!isRefetchingRef.current) {
+        isRefetchingRef.current = true;
+        setTimeout(() => {
+          activeQuery.refetch({ cancelRefetch: false }).finally(() => {
+            setTimeout(() => {
+              isRefetchingRef.current = false;
+            }, 1000);
+          });
+        }, 200);
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [view, activeQuery]);
+
   useEffect(() => {
     if (view !== 'all') return;
 
     const handleSyncComplete = (event: CustomEvent) => {
       if (event.detail?.userId === userId && !isRefetchingRef.current) {
         isRefetchingRef.current = true;
-        // Refetch after a short delay to ensure IndexedDB is updated
         setTimeout(() => {
           activeQuery.refetch().finally(() => {
             setTimeout(() => {
@@ -77,7 +107,7 @@ export function useNotesView(view: NoteView = 'all') {
     return () => {
       window.removeEventListener('notes-synced', handleSyncComplete as EventListener);
     };
-  }, [view, userId]);
+  }, [view, userId, activeQuery]);
 
   const archivedQuery = useQuery({
     queryKey: [ARCHIVED_QUERY_KEY, userId],
@@ -86,9 +116,6 @@ export function useNotesView(view: NoteView = 'all') {
         const notes = await getArchivedNotes(userId);
         return notes;
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to get archived notes:', error);
-        }
         return [];
       }
     },
@@ -106,7 +133,6 @@ export function useNotesView(view: NoteView = 'all') {
     if (view === 'archived') {
       archivedQuery.refetch();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
 
   const deletedQuery = useQuery({
@@ -115,9 +141,6 @@ export function useNotesView(view: NoteView = 'all') {
       try {
         return await getDeletedNotes(userId);
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to get deleted notes:', error);
-        }
         return [];
       }
     },
@@ -134,10 +157,8 @@ export function useNotesView(view: NoteView = 'all') {
   useEffect(() => {
     if (view === 'trash') {
       deletedQuery.refetch().catch(() => {
-        // Silently handle refetch errors
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
 
   switch (view) {
