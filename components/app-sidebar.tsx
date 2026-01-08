@@ -119,22 +119,6 @@ export function AppSidebar({
         ))}
       </nav>
 
-      {/* <div className="p-4 border-t border-border">
-        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-          Tags
-        </h2>
-        <div className="space-y-1">
-          {tags.map((tag) => (
-            <button
-              key={tag}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              <Tag className="w-4 h-4" />
-              <span>{tag}</span>
-            </button>
-          ))}
-        </div>
-      </div> */}
     </aside>
   );
 }

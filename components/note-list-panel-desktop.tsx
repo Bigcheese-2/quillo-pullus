@@ -45,7 +45,7 @@ export function NoteListPanelDesktop({
             <SyncStatusBadge showCounts={true} />
           </div>
           {!isMultiSelectMode && (
-            <p className="text-[11px] text-muted-foreground mt-3">
+            <p className="text-[11px] hidden lg:block text-muted-foreground mt-3">
               Tip: Press <kbd className="px-1.5 py-0.5 text-[11px] font-semibold text-foreground bg-muted border border-border rounded">⌘</kbd> + <kbd className="px-1.5 py-0.5 text-[11px] font-semibold text-foreground bg-muted border border-border rounded">A</kbd> or <kbd className="px-1.5 py-0.5 text-[11px] font-semibold text-foreground bg-muted border border-border rounded">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 text-[11px] font-semibold text-foreground bg-muted border border-border rounded">A</kbd> to select notes
             </p>
           )}
