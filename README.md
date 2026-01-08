@@ -40,11 +40,11 @@ Quillo is an offline-first PWA that allows users to create, edit, and delete not
 ```bash
 # Clone and install
 git clone <repository-url>
-cd pullus-assessment-1
+cd project folder
 npm install
 
 # Set up environment variables
-cp .env.example .env.local
+cp .env.example .env
 ```
 
 Update `.env.local`:
