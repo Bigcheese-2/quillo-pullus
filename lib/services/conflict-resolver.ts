@@ -12,7 +12,7 @@ export interface Conflict {
 
 /**
  * Resolves conflicts between local and server versions of notes using Last-Write-Wins strategy.
- * The note with the most recent modified_at timestamp wins.
+ * The note with the most recent modified_at timestamp updates.
  * 
  * @param localNote - The note from local storage (IndexedDB)
  * @param serverNote - The note from the server (Supabase)
@@ -32,7 +32,7 @@ export function resolveConflict(localNote: Note, serverNote: Note): Note {
 }
 
 /**
- * Detects and resolves conflicts for a single note.
+ * checks for conflicts and resolves conflicts for a single note.
  * Compares local and server versions, resolves using LWW, and saves the winner.
  * 
  * @param noteId - The ID of the note to check for conflicts
