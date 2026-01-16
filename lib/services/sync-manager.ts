@@ -38,7 +38,7 @@ function calculateBackoffDelay(retryCount: number): number {
 }
 
 /**
- * this Queues a sync operation to IndexedDB and registers Background Sync.
+ * Queues a sync operation to IndexedDB and registers Background Sync.
  * Prevents duplicate operations for the same noteId and type.
  * 
  * @param operation - The sync operation to queue

@@ -1,13 +1,6 @@
 import type { Note, CreateNoteInput, UpdateNoteInput } from "@/lib/types/note";
 import { supabaseRequest, encodeUserId } from "@/lib/supabase/client";
-import { getErrorMessage } from "@/lib/utils/error-handler";
-
-function getErrorStatus(error: unknown): number {
-  if (error && typeof error === "object" && "status" in error) {
-    return (error as { status: number }).status;
-  }
-  return 0;
-}
+import { getErrorMessage, getErrorStatus } from "@/lib/utils/error-handler";
 
 /**
  * Fetches all notes for a specific user from Supabase.
@@ -90,7 +83,7 @@ export async function createNote(note: CreateNoteInput): Promise<Note> {
 
     return createdNote;
   } catch (error) {
-    const status = getErrorStatus(error);
+    const status = getErrorStatus(error) ?? 0;
     
     if (status === 400) {
       throw new Error(
@@ -141,7 +134,7 @@ export async function updateNote(
 
     return updatedNote;
   } catch (error) {
-    const status = getErrorStatus(error);
+    const status = getErrorStatus(error) ?? 0;
 
     if (status === 404) {
       throw new Error(`Note with id ${id} not found`);
@@ -177,7 +170,7 @@ export async function deleteNote(id: string, userId: string): Promise<void> {
       method: "DELETE",
     });
   } catch (error) {
-    const status = getErrorStatus(error);
+    const status = getErrorStatus(error) ?? 0;
 
     if (status === 404) {
       throw new Error(`Note with id ${id} not found`);

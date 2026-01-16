@@ -36,28 +36,55 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.open(CACHE_NAMES.supabase).then((cache) => {
         if (request.method === 'GET') {
-          return fetch(request)
+          // For GET requests, try network first, then cache if offline
+          // Use 'no-store' to prevent browser from serving stale cache
+          return fetch(request, { cache: 'no-store' })
             .then((response) => {
               if (response.status === 200 || response.status === 0) {
                 cache.put(request, response.clone());
               }
               return response;
             })
-            .catch(() => {
-              return cache.match(request).then((cachedResponse) => {
-                if (cachedResponse) {
-                  return cachedResponse;
-                }
-                return new Response(
-                  JSON.stringify({ error: 'Offline' }),
-                  {
-                    status: 503,
-                    headers: { 'Content-Type': 'application/json' },
+            .catch((error) => {
+              // Only serve from cache if we're actually offline
+              // This prevents serving stale cache when online
+              if (!navigator.onLine) {
+                return cache.match(request).then((cachedResponse) => {
+                  if (cachedResponse) {
+                    return cachedResponse;
                   }
-                );
-              });
+                  return new Response(
+                    JSON.stringify({ error: 'Offline' }),
+                    {
+                      status: 503,
+                      headers: { 'Content-Type': 'application/json' },
+                    }
+                  );
+                });
+              }
+              // If we think we're online but fetch failed, return error
+              // Don't serve stale cache when online
+              return new Response(
+                JSON.stringify({ error: 'Network error', message: 'Request failed' }),
+                {
+                  status: 503,
+                  headers: { 'Content-Type': 'application/json' },
+                }
+              );
             });
         } else {
+          // For non-GET requests (POST, PATCH, DELETE), don't use cache when offline
+          // Return 503 immediately if offline to prevent stale operations
+          if (!navigator.onLine) {
+            return new Response(
+              JSON.stringify({ error: 'Offline', message: 'Network request failed. Please check your connection.' }),
+              {
+                status: 503,
+                headers: { 'Content-Type': 'application/json' },
+              }
+            );
+          }
+          
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('Request timeout')), 5000);
           });

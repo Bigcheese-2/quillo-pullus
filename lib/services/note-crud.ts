@@ -1,12 +1,11 @@
 import type { Note, CreateNoteInput, UpdateNoteInput } from '@/lib/types/note';
 import * as noteAPI from './note-api';
 import {
-  getNoteById,
   saveNote,
   deleteNote as deleteNoteFromDB,
 } from '@/lib/db/indexeddb';
 import { isOnline, generateUUID } from './note-utils';
-import { queueSyncOperationHelper } from './note-helpers';
+import { queueSyncOperationHelper, validateNoteAccess } from './note-helpers';
 
 export async function createNote(input: CreateNoteInput): Promise<Note> {
   const now = new Date().toISOString();
@@ -21,29 +20,24 @@ export async function createNote(input: CreateNoteInput): Promise<Note> {
 
   await saveNote(newNote);
 
-  await queueSyncOperationHelper('create', newNote.id, input, now);
-
   if (isOnline()) {
-    noteAPI.createNote(input)
-      .then(async (syncedNote) => {
-        const { getSyncOperations, deleteSyncOperation } = await import('@/lib/db/indexeddb');
-        const operations = await getSyncOperations();
-        const queuedOp = operations.find(op => op.noteId === newNote.id && op.type === 'create' && (op.status === 'pending' || op.status === 'syncing'));
-        if (queuedOp) {
-          await deleteSyncOperation(queuedOp.id);
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('sync-operation-completed'));
-          }
-        }
+    try {
+      const syncedNote = await noteAPI.createNote(input);
+      await saveNote(syncedNote);
+
+      if (newNote.id !== syncedNote.id) {
         await deleteNoteFromDB(newNote.id);
-        await saveNote(syncedNote);
-      })
-      .catch(() => {
-        // Ignore errors - operation is queued for retry
-      });
+      }
+
+      return syncedNote;
+    } catch (error) {
+      await queueSyncOperationHelper('create', newNote.id, input, now);
+      return newNote;
+    }
+  } else {
+    await queueSyncOperationHelper('create', newNote.id, input, now);
+    return newNote;
   }
-  
-  return newNote;
 }
 
 export async function updateNote(
@@ -51,14 +45,7 @@ export async function updateNote(
   userId: string,
   updates: UpdateNoteInput
 ): Promise<Note> {
-  const existingNote = await getNoteById(id);
-  if (!existingNote) {
-    throw new Error(`Note with id ${id} not found`);
-  }
-
-  if (existingNote.user_id !== userId) {
-    throw new Error(`Note with id ${id} does not belong to user ${userId}`);
-  }
+  const existingNote = await validateNoteAccess(id, userId);
 
   const updatedNote: Note = {
     ...existingNote,
@@ -69,14 +56,14 @@ export async function updateNote(
   await saveNote(updatedNote);
 
   if (isOnline()) {
-    noteAPI.updateNote(id, userId, updates)
-      .then(async (syncedNote) => {
-        await saveNote(syncedNote);
-      })
-      .catch(async (error) => {
-        await queueSyncOperationHelper('update', id, updates);
-      });
-    return updatedNote;
+    try {
+      const syncedNote = await noteAPI.updateNote(id, userId, updates);
+      await saveNote(syncedNote);
+      return syncedNote;
+    } catch (error) {
+      await queueSyncOperationHelper('update', id, updates);
+      return updatedNote;
+    }
   } else {
     await queueSyncOperationHelper('update', id, updates);
     return updatedNote;
@@ -84,14 +71,7 @@ export async function updateNote(
 }
 
 export async function deleteNote(id: string, userId: string): Promise<void> {
-  const existingNote = await getNoteById(id);
-  if (!existingNote) {
-    throw new Error(`Note with id ${id} not found`);
-  }
-
-  if (existingNote.user_id !== userId) {
-    throw new Error(`Note with id ${id} does not belong to user ${userId}`);
-  }
+  await validateNoteAccess(id, userId);
 
   await deleteNoteFromDB(id);
 

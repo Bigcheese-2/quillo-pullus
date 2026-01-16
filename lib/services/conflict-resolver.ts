@@ -88,24 +88,6 @@ export async function detectAndResolveConflict(
 }
 
 /**
- * Detects and resolves conflicts for all notes during sync.
- * Compares all local notes with server versions and resolves conflicts.
- * 
- * @param userId - The user's email address
- * @returns Array of resolved conflicts
- */
-export async function detectAndResolveAllConflicts(
-  userId: string
-): Promise<Conflict[]> {
-  try {
-    const serverNotes = await noteAPI.fetchAllNotes(userId);
-    return detectAndResolveAllConflictsWithNotes(userId, serverNotes);
-  } catch (error) {
-    return [];
-  }
-}
-
-/**
  * Detects and resolves conflicts using pre-fetched server notes.
  * This avoids duplicate API calls when server notes are already fetched.
  * 

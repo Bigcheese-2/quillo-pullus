@@ -1,22 +1,49 @@
 import type { Note } from '@/lib/types/note';
 import {
-  getNoteById,
   saveNote,
   deleteNote as deleteNoteFromDB,
 } from '@/lib/db/indexeddb';
 import * as noteAPI from './note-api';
 import { isOnline } from './note-utils';
-import { queueSyncOperationHelper } from './note-helpers';
+import { queueSyncOperationHelper, validateNoteAccess } from './note-helpers';
+
+/**
+ * Executes a bulk operation on multiple notes with consistent error handling.
+ * @param ids - Array of note IDs to process
+ * @param operation - Function to execute for each note ID
+ * @param operationName - Name of the operation for error messages
+ * @returns Array of successfully processed notes
+ * @throws Error if all operations fail
+ */
+async function executeBulkOperation<T>(
+  ids: string[],
+  operation: (id: string) => Promise<T>,
+  operationName: string
+): Promise<T[]> {
+  const results = await Promise.allSettled(
+    ids.map((id) => operation(id))
+  );
+  
+  const successful: T[] = [];
+  const errors: Error[] = [];
+  
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      successful.push(result.value);
+    } else {
+      errors.push(new Error(`Failed to ${operationName} note ${ids[index]}: ${result.reason.message}`));
+    }
+  });
+  
+  if (errors.length > 0 && successful.length === 0) {
+    throw new Error(`Failed to ${operationName} notes: ${errors.map(e => e.message).join(', ')}`);
+  }
+  
+  return successful;
+}
 
 export async function archiveNote(id: string, userId: string): Promise<Note> {
-  const existingNote = await getNoteById(id);
-  if (!existingNote) {
-    throw new Error(`Note with id ${id} not found`);
-  }
-
-  if (existingNote.user_id !== userId) {
-    throw new Error(`Note with id ${id} does not belong to user ${userId}`);
-  }
+  const existingNote = await validateNoteAccess(id, userId);
 
   const archivedNote: Note = {
     ...existingNote,
@@ -29,14 +56,7 @@ export async function archiveNote(id: string, userId: string): Promise<Note> {
 }
 
 export async function unarchiveNote(id: string, userId: string): Promise<Note> {
-  const existingNote = await getNoteById(id);
-  if (!existingNote) {
-    throw new Error(`Note with id ${id} not found`);
-  }
-
-  if (existingNote.user_id !== userId) {
-    throw new Error(`Note with id ${id} does not belong to user ${userId}`);
-  }
+  const existingNote = await validateNoteAccess(id, userId);
 
   const unarchivedNote: Note = {
     ...existingNote,
@@ -49,14 +69,7 @@ export async function unarchiveNote(id: string, userId: string): Promise<Note> {
 }
 
 export async function trashNote(id: string, userId: string): Promise<Note> {
-  const existingNote = await getNoteById(id);
-  if (!existingNote) {
-    throw new Error(`Note with id ${id} not found`);
-  }
-
-  if (existingNote.user_id !== userId) {
-    throw new Error(`Note with id ${id} does not belong to user ${userId}`);
-  }
+  const existingNote = await validateNoteAccess(id, userId);
 
   const trashedNote: Note = {
     ...existingNote,
@@ -70,14 +83,7 @@ export async function trashNote(id: string, userId: string): Promise<Note> {
 }
 
 export async function restoreNote(id: string, userId: string): Promise<Note> {
-  const existingNote = await getNoteById(id);
-  if (!existingNote) {
-    throw new Error(`Note with id ${id} not found`);
-  }
-
-  if (existingNote.user_id !== userId) {
-    throw new Error(`Note with id ${id} does not belong to user ${userId}`);
-  }
+  const existingNote = await validateNoteAccess(id, userId);
 
   const restoredNote: Note = {
     ...existingNote,
@@ -90,14 +96,7 @@ export async function restoreNote(id: string, userId: string): Promise<Note> {
 }
 
 export async function deleteNotePermanently(id: string, userId: string): Promise<void> {
-  const existingNote = await getNoteById(id);
-  if (!existingNote) {
-    throw new Error(`Note with id ${id} not found`);
-  }
-
-  if (existingNote.user_id !== userId) {
-    throw new Error(`Note with id ${id} does not belong to user ${userId}`);
-  }
+  await validateNoteAccess(id, userId);
 
   await deleteNoteFromDB(id);
 
@@ -113,72 +112,15 @@ export async function deleteNotePermanently(id: string, userId: string): Promise
 }
 
 export async function archiveNotes(ids: string[], userId: string): Promise<Note[]> {
-  const results = await Promise.allSettled(
-    ids.map((id) => archiveNote(id, userId))
-  );
-  
-  const archived: Note[] = [];
-  const errors: Error[] = [];
-  
-  results.forEach((result, index) => {
-    if (result.status === 'fulfilled') {
-      archived.push(result.value);
-    } else {
-      errors.push(new Error(`Failed to archive note ${ids[index]}: ${result.reason.message}`));
-    }
-  });
-  
-  if (errors.length > 0 && archived.length === 0) {
-    throw new Error(`Failed to archive notes: ${errors.map(e => e.message).join(', ')}`);
-  }
-  
-  return archived;
+  return executeBulkOperation(ids, (id) => archiveNote(id, userId), 'archive');
 }
 
 export async function trashNotes(ids: string[], userId: string): Promise<Note[]> {
-  const results = await Promise.allSettled(
-    ids.map((id) => trashNote(id, userId))
-  );
-  
-  const trashed: Note[] = [];
-  const errors: Error[] = [];
-  
-  results.forEach((result, index) => {
-    if (result.status === 'fulfilled') {
-      trashed.push(result.value);
-    } else {
-      errors.push(new Error(`Failed to trash note ${ids[index]}: ${result.reason.message}`));
-    }
-  });
-  
-  if (errors.length > 0 && trashed.length === 0) {
-    throw new Error(`Failed to trash notes: ${errors.map(e => e.message).join(', ')}`);
-  }
-  
-  return trashed;
+  return executeBulkOperation(ids, (id) => trashNote(id, userId), 'trash');
 }
 
 export async function restoreNotes(ids: string[], userId: string): Promise<Note[]> {
-  const results = await Promise.allSettled(
-    ids.map((id) => restoreNote(id, userId))
-  );
-  
-  const restored: Note[] = [];
-  const errors: Error[] = [];
-  
-  results.forEach((result, index) => {
-    if (result.status === 'fulfilled') {
-      restored.push(result.value);
-    } else {
-      errors.push(new Error(`Failed to restore note ${ids[index]}: ${result.reason.message}`));
-    }
-  });
-  
-  if (errors.length > 0 && restored.length === 0) {
-    throw new Error(`Failed to restore notes: ${errors.map(e => e.message).join(', ')}`);
-  }
-  
-  return restored;
+  return executeBulkOperation(ids, (id) => restoreNote(id, userId), 'restore');
 }
 
 export async function deleteNotesPermanently(ids: string[], userId: string): Promise<void> {

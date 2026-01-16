@@ -7,7 +7,6 @@ import { processSyncQueue } from '@/lib/services/sync-manager';
 import { formatConflictMessage } from '@/lib/services/conflict-resolver';
 import { getUserId } from '@/lib/config/env';
 
-
 export function ServiceWorkerRegister() {
   useEffect(() => {
     let messageListener: ((event: MessageEvent) => void) | null = null;

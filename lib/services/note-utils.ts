@@ -1,3 +1,10 @@
+/**
+ * Checks if the application is currently online.
+ * Always checks navigator.onLine directly to ensure accuracy.
+ * This is the source of truth - no caching or state management needed.
+ * 
+ * @returns true if online, false if offline
+ */
 export function isOnline(): boolean {
   if (typeof navigator === 'undefined') {
     return false;

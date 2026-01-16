@@ -34,8 +34,9 @@ export function OfflineIndicator({
     };
 
     if (typeof navigator !== 'undefined') {
-      setIsOnline(navigator.onLine);
-      setShow(!navigator.onLine);
+      const initialOnline = navigator.onLine;
+      setIsOnline(initialOnline);
+      setShow(!initialOnline);
     }
 
     window.addEventListener('online', handleOnline);

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Menu, CheckSquare } from "lucide-react";
+import { Menu } from "lucide-react";
 import { NoteSearch } from "@/components/notes/note-search";
 
 interface AppHeaderProps {
@@ -40,18 +40,6 @@ export function AppHeader({
           placeholder="Search notes..."
         />
       </div>
-      
-      {onEnableSelectionMode && !isSelectionMode && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onEnableSelectionMode}
-          className="rounded-lg shrink-0 h-9 w-9"
-          aria-label="Enable selection mode"
-        >
-          <CheckSquare className="w-5 h-5" />
-        </Button>
-      )}
     </div>
   );
 }

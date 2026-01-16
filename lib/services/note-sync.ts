@@ -14,20 +14,23 @@ export async function syncFromServer(userId: string): Promise<import('./conflict
     
     const notesToSave = await Promise.all(serverNotes.map(async (serverNote) => {
       const localNote = await getNoteById(serverNote.id);
+      
       if (localNote) {
-        return {
-          ...serverNote,
-          archived: localNote.archived ?? false,
-          deleted: localNote.deleted ?? false,
-        };
+        return null;
       }
+      
       return {
         ...serverNote,
         archived: serverNote.archived ?? false,
         deleted: serverNote.deleted ?? false,
       };
     }));
-    await saveNotes(notesToSave);
+    
+    const validNotesToSave = notesToSave.filter((n): n is NonNullable<typeof n> => n !== null);
+    
+    if (validNotesToSave.length > 0) {
+      await saveNotes(validNotesToSave);
+    }
     
     return conflicts;
   } catch (error) {

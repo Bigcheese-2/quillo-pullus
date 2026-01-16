@@ -48,7 +48,6 @@ export function detectErrorType(error: unknown): ErrorType {
   return ErrorType.UNKNOWN;
 }
 
-
 export function getErrorStatus(error: unknown): number | undefined {
   if (error && typeof error === 'object' && 'status' in error) {
     const status = (error as { status: unknown }).status;
@@ -126,7 +125,6 @@ export function getUserFriendlyMessage(error: AppError): string {
       return error.message || 'An unexpected error occurred.';
   }
 }
-
 
 export function logError(error: AppError, context?: string): void {
   if (!isDevelopment()) {
