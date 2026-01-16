@@ -1,5 +1,6 @@
 import type { Note, CreateNoteInput, UpdateNoteInput } from "@/lib/types/note";
 import { supabaseRequest, encodeUserId } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/utils/error-handler";
 
 function getErrorStatus(error: unknown): number {
   if (error && typeof error === "object" && "status" in error) {
@@ -25,7 +26,7 @@ export async function fetchAllNotes(userId: string): Promise<Note[]> {
     return Array.isArray(notes) ? notes : [];
   } catch (error) {
     throw new Error(
-      `Failed to fetch notes: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to fetch notes: ${getErrorMessage(error)}`
     );
   }
 }
@@ -59,7 +60,7 @@ export async function fetchNoteById(
       throw error;
     }
     throw new Error(
-      `Failed to fetch note: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to fetch note: ${getErrorMessage(error)}`
     );
   }
 }
@@ -98,7 +99,7 @@ export async function createNote(note: CreateNoteInput): Promise<Note> {
     }
 
     throw new Error(
-      `Failed to create note: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to create note: ${getErrorMessage(error)}`
     );
   }
 }
@@ -153,7 +154,7 @@ export async function updateNote(
     }
 
     throw new Error(
-      `Failed to update note: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to update note: ${getErrorMessage(error)}`
     );
   }
 }
@@ -183,7 +184,7 @@ export async function deleteNote(id: string, userId: string): Promise<void> {
     }
 
     throw new Error(
-      `Failed to delete note: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to delete note: ${getErrorMessage(error)}`
     );
   }
 }

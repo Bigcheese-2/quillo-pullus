@@ -17,3 +17,11 @@ export function generateUUID(): string {
   });
 }
 
+export function deduplicateNotes<T extends { id: string }>(notes: T[]): T[] {
+  const seenIds = new Set<string>();
+  return notes.filter((note) => {
+    if (seenIds.has(note.id)) return false;
+    seenIds.add(note.id);
+    return true;
+  });
+}

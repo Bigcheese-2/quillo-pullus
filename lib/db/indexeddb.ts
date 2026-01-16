@@ -1,6 +1,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import type { Note } from '@/lib/types/note';
 import type { SyncOperation } from '@/lib/types/sync';
+import { getErrorMessage } from '@/lib/utils/error-handler';
 
 interface NotesDBSchema extends DBSchema {
   notes: {
@@ -57,9 +58,6 @@ async function getDB(): Promise<IDBPDatabase<NotesDBSchema>> {
           syncStore.createIndex('status', 'status', { unique: false });
           syncStore.createIndex('queuedAt', 'queuedAt', { unique: false });
         }
-
-        // Migration for version 3: Initialize archived/deleted fields
-        // Migration is handled at runtime in getArchivedNotes and saveNote functions
       },
     });
 
@@ -76,7 +74,7 @@ async function getDB(): Promise<IDBPDatabase<NotesDBSchema>> {
       }
     }
     
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to open database: ${message}`);
   }
 }
@@ -100,7 +98,7 @@ export async function getAllNotes(): Promise<Note[]> {
     const notes = await db.getAll(STORE_NAME);
     return notes;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to get all notes: ${message}`);
   }
 }
@@ -140,7 +138,7 @@ export async function getNotesByUserId(
     
     return filtered;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to get notes for user: ${message}`);
   }
 }
@@ -181,7 +179,7 @@ export async function getArchivedNotes(userId: string): Promise<Note[]> {
     
     return archived;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to get archived notes: ${message}`);
   }
 }
@@ -209,7 +207,7 @@ export async function getDeletedNotes(userId: string): Promise<Note[]> {
     
     return deleted;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to get deleted notes: ${message}`);
   }
 }
@@ -229,7 +227,7 @@ export async function getNoteById(id: string): Promise<Note | undefined> {
     const note = await db.get(STORE_NAME, id);
     return note;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to get note by id: ${message}`);
   }
 }
@@ -249,7 +247,6 @@ export async function saveNote(note: Note): Promise<Note> {
   validateNonEmptyString(note.id, 'note.id');
   validateNonEmptyString(note.user_id, 'note.user_id');
 
-  // Ensure archived and deleted fields are always set
   if (note.archived === undefined) {
     note.archived = false;
   }
@@ -262,7 +259,7 @@ export async function saveNote(note: Note): Promise<Note> {
     await db.put(STORE_NAME, note);
     return note;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to save note: ${message}`);
   }
 }
@@ -289,7 +286,6 @@ export async function saveNotes(notes: Note[]): Promise<Note[]> {
     }
     validateNonEmptyString(note.id, 'note.id in array');
     
-    // Ensure archived and deleted fields are always set (preserve existing values)
     if (note.archived === undefined) {
       note.archived = false;
     }
@@ -306,7 +302,7 @@ export async function saveNotes(notes: Note[]): Promise<Note[]> {
 
     return notes;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to save notes: ${message}`);
   }
 }
@@ -325,7 +321,7 @@ export async function deleteNote(id: string): Promise<void> {
     const db = await getDB();
     await db.delete(STORE_NAME, id);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to delete note: ${message}`);
   }
 }
@@ -342,7 +338,7 @@ export async function deleteAllNotes(): Promise<void> {
     const db = await getDB();
     await db.clear(STORE_NAME);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to delete all notes: ${message}`);
   }
 }
@@ -371,7 +367,7 @@ export async function deleteNotesByUserId(userId: string): Promise<void> {
     await Promise.all(keys.map(key => tx.store.delete(key)));
     await tx.done;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to delete notes for user: ${message}`);
   }
 }
@@ -388,11 +384,10 @@ export async function getNoteCount(): Promise<number> {
     const count = await db.count(STORE_NAME);
     return count;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to get note count: ${message}`);
   }
 }
-
 
 /**
  * Saves a sync operation to IndexedDB.
@@ -407,7 +402,7 @@ export async function saveSyncOperation(operation: SyncOperation): Promise<SyncO
     await db.put(SYNC_STORE_NAME, operation);
     return operation;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to save sync operation: ${message}`);
   }
 }
@@ -429,7 +424,7 @@ export async function getSyncOperations(status?: SyncOperation['status']): Promi
     
     return await db.getAll(SYNC_STORE_NAME);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to get sync operations: ${message}`);
   }
 }
@@ -446,7 +441,7 @@ export async function getSyncOperationById(id: string): Promise<SyncOperation | 
     const db = await getDB();
     return await db.get(SYNC_STORE_NAME, id);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to get sync operation: ${message}`);
   }
 }
@@ -463,7 +458,7 @@ export async function deleteSyncOperation(id: string): Promise<void> {
     const db = await getDB();
     await db.delete(SYNC_STORE_NAME, id);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to delete sync operation: ${message}`);
   }
 }
@@ -484,7 +479,7 @@ export async function deleteSyncOperationsByStatus(status: SyncOperation['status
     await Promise.all(keys.map(key => tx.store.delete(key)));
     await tx.done;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to delete sync operations: ${message}`);
   }
 }
@@ -507,7 +502,7 @@ export async function getSyncOperationCount(status?: SyncOperation['status']): P
     
     return await db.count(SYNC_STORE_NAME);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     throw new Error(`Failed to get sync operation count: ${message}`);
   }
 }

@@ -2,6 +2,8 @@ import type { SyncOperation } from '@/lib/types/sync';
 import type { CreateNoteInput, UpdateNoteInput } from '@/lib/types/note';
 import * as noteAPI from './note-api';
 import { detectAndResolveConflict, formatConflictMessage, type Conflict } from './conflict-resolver';
+import { isOnline } from './note-utils';
+import { getErrorMessage } from '@/lib/utils/error-handler';
 import {
   saveSyncOperation,
   getSyncOperations,
@@ -11,21 +13,11 @@ import {
   getSyncOperationById,
 } from '@/lib/db/indexeddb';
 
-
 const MAX_RETRY_ATTEMPTS = 3;
-
 
 const BASE_RETRY_DELAY_MS = 1000;
 
 const SYNC_TAG = 'sync-notes';
-
-
-function isOnline(): boolean {
-  if (typeof navigator === 'undefined') {
-    return false;
-  }
-  return navigator.onLine;
-}
 
 
 function isBackgroundSyncSupported(): boolean {
@@ -40,18 +32,13 @@ function isBackgroundSyncSupported(): boolean {
   }
 }
 
-/**
- * Calculates exponential backoff delay based on retry count.
- * 
- * @param retryCount - Number of previous retry attempts
- * @returns Delay in milliseconds
- */
+
 function calculateBackoffDelay(retryCount: number): number {
   return BASE_RETRY_DELAY_MS * Math.pow(2, retryCount);
 }
 
 /**
- * Queues a sync operation to IndexedDB and registers Background Sync if supported.
+ * this Queues a sync operation to IndexedDB and registers Background Sync.
  * Prevents duplicate operations for the same noteId and type.
  * 
  * @param operation - The sync operation to queue
@@ -115,7 +102,9 @@ async function processSyncOperation(
         
         if (operation.noteId && operation.noteId !== syncedNote.id) {
           const { deleteNote: deleteNoteFromDB } = await import('@/lib/db/indexeddb');
-          await deleteNoteFromDB(operation.noteId).catch(() => {});
+          await deleteNoteFromDB(operation.noteId).catch(() => {
+            // Ignore errors when cleaning up old note
+          });
         }
         
         await saveNote(syncedNote);
@@ -156,7 +145,7 @@ async function processSyncOperation(
   } catch (error) {
     operation.retryCount++;
     operation.status = 'failed';
-    operation.error = error instanceof Error ? error.message : 'Unknown error';
+    operation.error = getErrorMessage(error);
 
     if (operation.retryCount >= MAX_RETRY_ATTEMPTS) {
       await saveSyncOperation(operation);
@@ -168,6 +157,7 @@ async function processSyncOperation(
       const delay = calculateBackoffDelay(operation.retryCount);
       setTimeout(() => {
         processSyncOperation(operation, userId).catch(() => {
+          // Ignore errors - will retry on next sync
         });
       }, delay);
       
@@ -176,14 +166,7 @@ async function processSyncOperation(
   }
 }
 
-/**
- * Processes all pending sync operations.
- * This is called when the app comes online or when Background Sync is triggered.
- * 
- * @param userId - The user's email address
- * @returns Promise resolving to sync result with count and conflicts
- */
-// Lock to prevent concurrent processing of the same queue
+
 let isProcessingQueue = false;
 
 export async function processSyncQueue(userId: string): Promise<{
@@ -304,14 +287,6 @@ export async function getFailedSyncOperations(): Promise<SyncOperation[]> {
   return await getSyncOperations('failed');
 }
 
-/**
- * Retries a failed sync operation.
- * 
- * @param operationId - The ID of the operation to retry
- * @param userId - The user's email address
- * @returns Promise resolving when retry is complete
- * @throws Error if operation is not found or retry fails
- */
 export async function retrySyncOperation(
   operationId: string,
   userId: string

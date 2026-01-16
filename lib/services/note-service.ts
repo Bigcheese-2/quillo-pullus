@@ -1,6 +1,3 @@
-
-
-// Read operations
 export {
   getAllNotes,
   getArchivedNotes,

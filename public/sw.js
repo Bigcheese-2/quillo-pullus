@@ -1,16 +1,9 @@
-/**
- * Service Worker for Quillo 
- * Handles offline caching and background sync
- */
-
-const CACHE_VERSION = 'quillo-v1';
 const CACHE_NAMES = {
   supabase: 'supabase-api-cache',
   static: 'static-assets',
   pages: 'app-pages',
 };
 
-// Install event - cache essential resources
 self.addEventListener('install', (event) => {
   self.skipWaiting(); 
 });
@@ -21,27 +14,20 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames
           .filter((cacheName) => {
-            // Delete old caches that don't match current version
             return !Object.values(CACHE_NAMES).includes(cacheName);
           })
           .map((cacheName) => caches.delete(cacheName))
       );
+    }).then(() => {
+      return self.clients.claim();
     })
   );
-  return self.clients.claim(); // Take control of all pages immediately
 });
 
-// Fetch event - implement caching strategies
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-
-  // Skip non-GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
-
-  // Skip chrome-extension and other non-http(s) requests
+  
   if (!url.protocol.startsWith('http')) {
     return;
   }
@@ -49,36 +35,58 @@ self.addEventListener('fetch', (event) => {
   if (url.hostname.includes('supabase.co')) {
     event.respondWith(
       caches.open(CACHE_NAMES.supabase).then((cache) => {
-        return fetch(request)
-          .then((response) => {
-            // Cache successful responses
-            if (response.status === 200 || response.status === 0) {
-              cache.put(request, response.clone());
-            }
-            return response;
-          })
-          .catch(() => {
-            // Network failed, try cache
-            return cache.match(request).then((cachedResponse) => {
-              if (cachedResponse) {
-                return cachedResponse;
+        if (request.method === 'GET') {
+          return fetch(request)
+            .then((response) => {
+              if (response.status === 200 || response.status === 0) {
+                cache.put(request, response.clone());
               }
-              // Return offline fallback if available
+              return response;
+            })
+            .catch(() => {
+              return cache.match(request).then((cachedResponse) => {
+                if (cachedResponse) {
+                  return cachedResponse;
+                }
+                return new Response(
+                  JSON.stringify({ error: 'Offline' }),
+                  {
+                    status: 503,
+                    headers: { 'Content-Type': 'application/json' },
+                  }
+                );
+              });
+            });
+        } else {
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Request timeout')), 5000);
+          });
+          
+          return Promise.race([
+            fetch(request),
+            timeoutPromise
+          ])
+            .then((response) => {
+              if (response instanceof Response) {
+                return response;
+              }
+              throw new Error('Invalid response');
+            })
+            .catch((error) => {
               return new Response(
-                JSON.stringify({ error: 'Offline' }),
+                JSON.stringify({ error: 'Offline', message: 'Network request failed' }),
                 {
                   status: 503,
                   headers: { 'Content-Type': 'application/json' },
                 }
               );
             });
-          });
+        }
       })
     );
     return;
   }
 
-  // CacheFirst strategy for static assets
   if (
     /\.(?:png|jpg|jpeg|svg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$/.test(
       url.pathname
@@ -102,7 +110,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // NetworkFirst strategy for app pages
   if (url.origin === self.location.origin) {
     event.respondWith(
       caches.open(CACHE_NAMES.pages).then((cache) => {
@@ -114,12 +121,10 @@ self.addEventListener('fetch', (event) => {
             return response;
           })
           .catch(() => {
-            // Network failed, try cache
             return cache.match(request).then((cachedResponse) => {
               if (cachedResponse) {
                 return cachedResponse;
               }
-              // Return offline page for navigation requests
               if (request.mode === 'navigate') {
                 return caches.match('/offline');
               }
@@ -132,11 +137,9 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Background Sync event - handle sync operations
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-notes') {
     event.waitUntil(
-      // Send message to client to trigger sync
       self.clients.matchAll().then((clients) => {
         clients.forEach((client) => {
           client.postMessage({
@@ -148,7 +151,6 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// Message event - handle messages from client
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();

@@ -7,13 +7,15 @@ import { processSyncQueue } from '@/lib/services/sync-manager';
 import { formatConflictMessage } from '@/lib/services/conflict-resolver';
 import { getUserId } from '@/lib/config/env';
 
-/**
- * Client component that registers the service worker on mount.
- * This should be included in the root layout.
- */
+
 export function ServiceWorkerRegister() {
   useEffect(() => {
-    registerServiceWorker({
+    let messageListener: ((event: MessageEvent) => void) | null = null;
+    let onlineHandler: (() => void) | null = null;
+    let offlineHandler: (() => void) | null = null;
+
+    const initServiceWorker = async () => {
+      await registerServiceWorker({
         onUpdateAvailable: () => {
         },
         onInstalled: () => {
@@ -23,7 +25,7 @@ export function ServiceWorkerRegister() {
       });
 
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.addEventListener('message', async (event) => {
+        messageListener = async (event: MessageEvent) => {
           if (event.data && event.data.type === 'SYNC_NOTES') {
             const userId = getUserId();
             try {
@@ -38,10 +40,11 @@ export function ServiceWorkerRegister() {
             } catch (error) {
             }
           }
-        });
+        };
+        navigator.serviceWorker.addEventListener('message', messageListener);
       }
 
-      const handleOnline = async () => {
+      onlineHandler = async () => {
         const userId = getUserId();
         try {
           const result = await processSyncQueue(userId);
@@ -52,15 +55,31 @@ export function ServiceWorkerRegister() {
               });
             });
           }
-          } catch (error) {
-          }
+        } catch (error) {
+        }
       };
 
-      window.addEventListener('online', handleOnline);
-
-      return () => {
-        window.removeEventListener('online', handleOnline);
+      offlineHandler = () => {
       };
+
+      window.addEventListener('online', onlineHandler);
+      window.addEventListener('offline', offlineHandler);
+    };
+
+    initServiceWorker().catch(() => {
+    });
+
+    return () => {
+      if (messageListener && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', messageListener);
+      }
+      if (onlineHandler) {
+        window.removeEventListener('online', onlineHandler);
+      }
+      if (offlineHandler) {
+        window.removeEventListener('offline', offlineHandler);
+      }
+    };
   }, []);
 
   return null;

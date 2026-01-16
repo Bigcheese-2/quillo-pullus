@@ -2,7 +2,7 @@
 
 import { NoteList } from "@/components/notes/note-list";
 import { SyncStatusBadge } from "@/components/sync";
-import { Note } from "@/lib/types/note";
+import { Note, NoteView } from "@/lib/types/note";
 
 interface NoteListPanelProps {
   notes: Note[];
@@ -14,6 +14,7 @@ interface NoteListPanelProps {
   multiSelectedIds?: Set<string>;
   onMultiSelectToggle?: (noteId: string, e?: React.MouseEvent) => void;
   onEnableSelectionMode?: () => void;
+  view?: NoteView;
 }
 
 export function NoteListPanel({
@@ -26,6 +27,7 @@ export function NoteListPanel({
   multiSelectedIds = new Set(),
   onMultiSelectToggle,
   onEnableSelectionMode,
+  view = 'all',
 }: NoteListPanelProps) {
   return (
     <div className="md:hidden flex-1 flex flex-col h-full overflow-hidden data-[hidden=true]:hidden">
@@ -52,6 +54,7 @@ export function NoteListPanel({
           isMultiSelectMode={isMultiSelectMode}
           multiSelectedIds={multiSelectedIds}
           onMultiSelectToggle={onMultiSelectToggle}
+          view={view}
         />
       </div>
     </div>

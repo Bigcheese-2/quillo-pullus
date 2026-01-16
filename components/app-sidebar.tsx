@@ -74,20 +74,18 @@ export function AppSidebar({
         </div>
       </div>
 
-      {currentView === 'all' && (
-        <div className="border-b border-border">
-          <div className="p-4">
-            <Button
-              onClick={onNewNote}
-              className="w-full bg-accent hover:bg-accent/90 text-white rounded-lg h-10 font-medium"
-              size="default"
-            >
-              <span className="mr-2">+</span>
-              New Note
-            </Button>
-          </div>
+      <div className="border-b border-border">
+        <div className="p-4">
+          <Button
+            onClick={onNewNote}
+            className="w-full bg-accent hover:bg-accent/90 text-white rounded-lg h-10 font-medium"
+            size="default"
+          >
+            <span className="mr-2">+</span>
+            New Note
+          </Button>
         </div>
-      )}
+      </div>
 
       <nav className="flex-1 p-4 space-y-1">
         {navigationItems.map((item) => (

@@ -160,7 +160,6 @@ export function EditorCanvas({
         </div>
       </div>
 
-      {/* Note Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 md:px-8 py-6 md:py-8">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-6 md:mb-8">

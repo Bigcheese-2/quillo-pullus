@@ -18,6 +18,7 @@ import { useArchiveNote, useUnarchiveNote, useTrashNote, useRestoreNote, useDele
 import { useMultiSelect } from "@/hooks/use-multi-select";
 import { SelectionToolbar } from "@/components/notes/selection-toolbar";
 import { Note, NoteView } from "@/lib/types/note";
+import { getErrorMessage } from "@/lib/utils/error-handler";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -37,13 +38,11 @@ export default function Home() {
   const restoreNoteMutation = useRestoreNote();
   const deletePermanentlyMutation = useDeleteNotePermanently();
   
-  // Bulk operations
   const bulkArchiveMutation = useBulkArchiveNotes();
   const bulkTrashMutation = useBulkTrashNotes();
   const bulkRestoreMutation = useBulkRestoreNotes();
   const bulkDeletePermanentlyMutation = useBulkDeleteNotesPermanently();
   
-  // Multi-selection
   const multiSelect = useMultiSelect<string>();
   const { clearSelection } = multiSelect;
   
@@ -76,16 +75,13 @@ export default function Home() {
     clearSelection();
   }, [currentView, clearSelection]);
   
-  // Keyboard shortcuts for multi-selection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + A to select all
       if ((e.metaKey || e.ctrlKey) && e.key === 'a' && !multiSelect.isSelectionMode) {
         e.preventDefault();
         handleEnableSelectionMode();
         multiSelect.selectAll(filteredNotes.map(n => n.id));
       }
-      // Escape to clear selection
       if (e.key === 'Escape' && multiSelect.hasSelection) {
         multiSelect.clearSelection();
       }
@@ -153,12 +149,16 @@ export default function Home() {
         });
         setNoteDialogOpen(false);
         setEditingNote(undefined);
+        const { getSyncStatus } = await import('@/lib/services/sync-manager');
+        const status = await getSyncStatus();
         toast.success("Note updated successfully", {
-          description: "Your changes have been saved locally and will sync when online.",
+          description: status.isOnline && status.pendingCount === 0
+            ? "Your changes have been saved." 
+            : "Your changes have been saved locally and will sync when online.",
         });
       } catch (error) {
         toast.error("Failed to update note", {
-          description: error instanceof Error ? error.message : "An unknown error occurred",
+          description: getErrorMessage(error, "An unknown error occurred"),
         });
       }
     } else {
@@ -170,12 +170,17 @@ export default function Home() {
         });
         setNoteDialogOpen(false);
         setSelectedNoteId(newNote.id);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const { getSyncStatus } = await import('@/lib/services/sync-manager');
+        const status = await getSyncStatus();
         toast.success("Note created successfully", {
-          description: "Your new note has been saved locally and will sync when online.",
+          description: status.isOnline && status.pendingCount === 0
+            ? "Your new note has been saved." 
+            : "Your new note has been saved locally and will sync when online.",
         });
       } catch (error) {
         toast.error("Failed to create note", {
-          description: error instanceof Error ? error.message : "An unknown error occurred",
+          description: getErrorMessage(error, "An unknown error occurred"),
         });
       }
     }
@@ -199,12 +204,10 @@ export default function Home() {
     if (multiSelect.isSelectionMode) {
       const noteIndex = filteredNotes.findIndex(n => n.id === noteId);
       if (e?.shiftKey && multiSelect.lastSelectedIndex !== null && noteIndex !== -1) {
-        // Range selection with Shift+Click
         const noteIds = filteredNotes.map(n => n.id);
         multiSelect.selectRange(noteIds, multiSelect.lastSelectedIndex, noteIndex);
         multiSelect.setLastSelectedIndex(noteIndex);
       } else {
-        // Single selection
         multiSelect.toggleSelection(noteId);
         if (noteIndex !== -1) {
           multiSelect.setLastSelectedIndex(noteIndex);
@@ -225,7 +228,6 @@ export default function Home() {
         setSelectedNoteId(undefined);
       }
     } catch (error) {
-      // Error is handled by the mutation
     }
   };
   
@@ -238,7 +240,6 @@ export default function Home() {
         setSelectedNoteId(undefined);
       }
     } catch (error) {
-      // Error is handled by the mutation
     }
   };
   
@@ -277,7 +278,7 @@ export default function Home() {
   }
 
   if (error && notes.length === 0) {
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+    const errorMessage = getErrorMessage(error, "An unknown error occurred");
     const isNetworkError = errorMessage.includes("Network error") || errorMessage.includes("Unable to connect");
 
     return (
@@ -350,6 +351,7 @@ export default function Home() {
                 multiSelectedIds={multiSelect.selectedIds}
                 onMultiSelectToggle={(noteId, e) => handleNoteSelect(noteId, e)}
                 onEnableSelectionMode={multiSelect.enableSelectionMode}
+                view={currentView}
             />
           ) : (
             <div className="md:hidden flex-1">
@@ -377,10 +379,10 @@ export default function Home() {
             onArchive={handleArchiveNote}
             onTrash={handleDeleteNote}
             onRestore={handleRestoreNote}
-              isMultiSelectMode={multiSelect.isSelectionMode}
-              multiSelectedIds={multiSelect.selectedIds}
-              onMultiSelectToggle={(noteId, e) => handleNoteSelect(noteId, e)}
-              onEnableSelectionMode={multiSelect.enableSelectionMode}
+            isMultiSelectMode={multiSelect.isSelectionMode}
+            multiSelectedIds={multiSelect.selectedIds}
+            onMultiSelectToggle={(noteId, e) => handleNoteSelect(noteId, e)}
+            onEnableSelectionMode={multiSelect.enableSelectionMode}
           />
 
           <div className="hidden md:flex flex-1">
@@ -411,15 +413,13 @@ export default function Home() {
           )}
         </div>
 
-        {currentView === 'all' && (
-          <Button
-            onClick={handleCreateNote}
-            className="lg:hidden fixed bottom-6 right-6 h-14 w-14 rounded-full bg-accent hover:bg-accent/90 text-white shadow-lg shadow-black/20 z-50 flex items-center justify-center p-0"
-            aria-label="New Note"
-          >
-            <Plus className="w-6 h-6" />
-          </Button>
-        )}
+        <Button
+          onClick={handleCreateNote}
+          className="lg:hidden fixed bottom-6 right-6 h-14 w-14 rounded-full bg-accent hover:bg-accent/90 text-white shadow-lg shadow-black/20 z-50 flex items-center justify-center p-0"
+          aria-label="New Note"
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
         </div>
       </div>
 

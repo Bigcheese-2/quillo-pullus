@@ -5,8 +5,8 @@ import {
   deleteNote as deleteNoteFromDB,
 } from '@/lib/db/indexeddb';
 import * as noteAPI from './note-api';
-import { queueSyncOperation as queueSyncOp } from './sync-manager';
-import { isOnline, generateSyncId } from './note-utils';
+import { isOnline } from './note-utils';
+import { queueSyncOperationHelper } from './note-helpers';
 
 export async function archiveNote(id: string, userId: string): Promise<Note> {
   const existingNote = await getNoteById(id);
@@ -105,30 +105,13 @@ export async function deleteNotePermanently(id: string, userId: string): Promise
     try {
       await noteAPI.deleteNote(id, userId);
     } catch (error) {
-      await queueSyncOp({
-        id: generateSyncId(),
-        type: 'delete',
-        noteId: id,
-        noteData: undefined,
-        status: 'pending',
-        queuedAt: new Date().toISOString(),
-        retryCount: 0,
-      });
+      await queueSyncOperationHelper('delete', id);
     }
   } else {
-    await queueSyncOp({
-      id: generateSyncId(),
-      type: 'delete',
-      noteId: id,
-      noteData: undefined,
-      status: 'pending',
-      queuedAt: new Date().toISOString(),
-      retryCount: 0,
-    });
+    await queueSyncOperationHelper('delete', id);
   }
 }
 
-// Bulk operations
 export async function archiveNotes(ids: string[], userId: string): Promise<Note[]> {
   const results = await Promise.allSettled(
     ids.map((id) => archiveNote(id, userId))

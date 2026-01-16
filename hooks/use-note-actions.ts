@@ -15,10 +15,8 @@ import {
 } from '@/lib/services/note-service';
 import type { Note } from '@/lib/types/note';
 import { getUserId } from '@/lib/config/env';
-
-const NOTES_QUERY_KEY = 'notes';
-const ARCHIVED_QUERY_KEY = 'archived-notes';
-const DELETED_QUERY_KEY = 'deleted-notes';
+import { getErrorMessage } from '@/lib/utils/error-handler';
+import { NOTES_QUERY_KEY, ARCHIVED_QUERY_KEY, DELETED_QUERY_KEY } from './query-keys';
 
 export function useArchiveNote() {
   const queryClient = useQueryClient();
@@ -78,7 +76,7 @@ export function useArchiveNote() {
         queryClient.setQueryData([ARCHIVED_QUERY_KEY, userId], context.previousArchived);
       }
       toast.error('Failed to archive note', {
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        description: getErrorMessage(error, 'An unknown error occurred'),
       });
     },
   });
@@ -130,7 +128,7 @@ export function useUnarchiveNote() {
         queryClient.setQueryData([ARCHIVED_QUERY_KEY, userId], context.previousArchived);
       }
       toast.error('Failed to unarchive note', {
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        description: getErrorMessage(error, 'An unknown error occurred'),
       });
     },
   });
@@ -179,7 +177,7 @@ export function useTrashNote() {
         queryClient.setQueryData([ARCHIVED_QUERY_KEY, userId], context.previousArchived);
       }
       toast.error('Failed to move note to trash', {
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        description: getErrorMessage(error, 'An unknown error occurred'),
       });
     },
   });
@@ -231,7 +229,7 @@ export function useRestoreNote() {
         queryClient.setQueryData([DELETED_QUERY_KEY, userId], context.previousDeleted);
       }
       toast.error('Failed to restore note', {
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        description: getErrorMessage(error, 'An unknown error occurred'),
       });
     },
   });
@@ -268,13 +266,12 @@ export function useDeleteNotePermanently() {
         queryClient.setQueryData([DELETED_QUERY_KEY, userId], context.previousDeleted);
       }
       toast.error('Failed to delete note', {
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        description: getErrorMessage(error, 'An unknown error occurred'),
       });
     },
   });
 }
 
-// Bulk operations hooks
 export function useBulkArchiveNotes() {
   const queryClient = useQueryClient();
   const userId = getUserId();
@@ -292,7 +289,7 @@ export function useBulkArchiveNotes() {
     },
     onError: (error) => {
       toast.error('Failed to archive notes', {
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        description: getErrorMessage(error, 'An unknown error occurred'),
       });
     },
   });
@@ -316,7 +313,7 @@ export function useBulkTrashNotes() {
     },
     onError: (error) => {
       toast.error('Failed to move notes to trash', {
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        description: getErrorMessage(error, 'An unknown error occurred'),
       });
     },
   });
@@ -339,7 +336,7 @@ export function useBulkRestoreNotes() {
     },
     onError: (error) => {
       toast.error('Failed to restore notes', {
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        description: getErrorMessage(error, 'An unknown error occurred'),
       });
     },
   });
@@ -359,7 +356,7 @@ export function useBulkDeleteNotesPermanently() {
     },
     onError: (error) => {
       toast.error('Failed to delete notes', {
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        description: getErrorMessage(error, 'An unknown error occurred'),
       });
     },
   });

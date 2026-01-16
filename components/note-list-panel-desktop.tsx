@@ -37,7 +37,6 @@ export function NoteListPanelDesktop({
 }: NoteListPanelDesktopProps) {
   return (
     <div className="hidden md:flex w-80 bg-background flex-col h-full overflow-hidden border-r border-border">
-      {/* Header */}
       <div className="border-b border-border">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between gap-3">
@@ -62,6 +61,7 @@ export function NoteListPanelDesktop({
           isMultiSelectMode={isMultiSelectMode}
           multiSelectedIds={multiSelectedIds}
           onMultiSelectToggle={onMultiSelectToggle}
+          view={view}
         />
       </div>
     </div>

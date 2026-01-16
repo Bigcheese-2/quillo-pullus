@@ -10,9 +10,8 @@ import {
 } from "@/lib/services/note-service";
 import type { Note, CreateNoteInput, UpdateNoteInput } from "@/lib/types/note";
 import { getUserId } from "@/lib/config/env";
-
-const NOTES_QUERY_KEY = "notes";
-const NOTE_QUERY_KEY = "note";
+import { deduplicateNotes } from "@/lib/services/note-utils";
+import { NOTES_QUERY_KEY, NOTE_QUERY_KEY } from "./query-keys";
 
 export function useNotes() {
 
@@ -31,13 +30,6 @@ export function useNotes() {
         }
       }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
-    retry: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-    throwOnError: false,
     placeholderData: (previousData) => previousData,
   });
 }
@@ -91,17 +83,9 @@ export function useCreateNote() {
       if (!currentData || currentData.length === 0) {
         newData = [data];
       } else {
-        const seenIds = new Set<string>();
-        seenIds.add(data.id);
-        
-        const filtered = currentData.filter((note) => {
-          if (note.id.startsWith('temp-')) return false;
-          if (seenIds.has(note.id)) return false;
-          seenIds.add(note.id);
-          return true;
-        });
-        
-        newData = [data, ...filtered];
+        const filtered = currentData.filter((note) => !note.id.startsWith('temp-'));
+        const deduplicated = deduplicateNotes([data, ...filtered]);
+        newData = deduplicated;
       }
       
       queryClient.setQueryData([NOTES_QUERY_KEY, userId], newData);

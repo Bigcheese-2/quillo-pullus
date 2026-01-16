@@ -61,5 +61,3 @@ export async function getNote(id: string, userId: string): Promise<Note | undefi
 
   return localNote;
 }
-
-

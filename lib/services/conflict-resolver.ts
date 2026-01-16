@@ -64,7 +64,6 @@ export async function detectAndResolveConflict(
     const resolution: Conflict['resolution'] = 
       resolvedNote.modified_at === localNote.modified_at ? 'local' : 'server';
 
-    // Preserve local archived/deleted values (frontend-only features)
     const finalResolvedNote: Note = {
       ...resolvedNote,
       archived: localNote.archived ?? false,
@@ -136,7 +135,6 @@ export async function detectAndResolveAllConflictsWithNotes(
         const resolution: Conflict['resolution'] = 
           resolvedNote.modified_at === localNote.modified_at ? 'local' : 'server';
 
-        // Preserve local archived/deleted values (frontend-only features)
         const finalResolvedNote: Note = {
           ...resolvedNote,
           archived: localNote.archived ?? false,
@@ -161,12 +159,6 @@ export async function detectAndResolveAllConflictsWithNotes(
   }
 }
 
-/**
- * Formats a conflict message for user notification.
- * 
- * @param conflict - The conflict object
- * @returns Human-readable conflict message
- */
 export function formatConflictMessage(conflict: Conflict): string {
   const noteTitle = conflict.localNote.title || 'Untitled Note';
   const resolutionText = conflict.resolution === 'local' 

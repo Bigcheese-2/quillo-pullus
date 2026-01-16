@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils/error-handler';
 
             
 interface SyncStatusProps {
@@ -59,13 +60,41 @@ export function SyncStatus({
         toast.info('No pending operations to sync');
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to sync';
+      const errorMessage = getErrorMessage(error, 'Failed to sync');
       toast.error(errorMessage);
     }
   };
 
   
   const getStatusConfig = () => {
+    const hasPendingOperations = syncState.pendingCount > 0 || syncState.failedCount > 0;
+    
+    if (hasPendingOperations) {
+      switch (syncState.status) {
+        case 'syncing':
+          return {
+            icon: Loader2,
+            label: 'Syncing',
+            variant: 'secondary' as const,
+            className: 'text-blue-600 dark:text-blue-400 animate-spin',
+          };
+        case 'pending':
+          return {
+            icon: Clock,
+            label: 'Pending',
+            variant: 'secondary' as const,
+            className: 'text-yellow-600 dark:text-yellow-400',
+          };
+        case 'failed':
+          return {
+            icon: AlertCircle,
+            label: 'Failed',
+            variant: 'destructive' as const,
+            className: 'text-red-600 dark:text-red-400',
+          };
+      }
+    }
+    
     if (!syncState.isOnline) {
       return {
         icon: WifiOff,
@@ -118,7 +147,6 @@ export function SyncStatus({
   const StatusIcon = statusConfig.icon;
   const hasPendingOperations = syncState.pendingCount > 0 || syncState.failedCount > 0;
 
-  // Size variants
   const sizeClasses = {
     sm: 'text-xs gap-1',
     default: 'text-sm gap-1.5',

@@ -67,14 +67,12 @@ export function useMultiSelect<T extends string | number>(initialSelection: Set<
   const hasSelection = selectedIds.size > 0;
   const selectedCount = selectedIds.size;
 
-  // Clear selection when component unmounts or when explicitly cleared
   useEffect(() => {
     if (!hasSelection && isSelectionMode) {
       setIsSelectionMode(false);
     }
   }, [hasSelection, isSelectionMode]);
 
-  // Memoize the return object to prevent infinite re-renders
   return useMemo(() => ({
     selectedIds,
     isSelectionMode,

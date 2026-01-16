@@ -5,10 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { getAllNotes, getArchivedNotes, getDeletedNotes } from '@/lib/services/note-service';
 import type { NoteView } from '@/lib/types/note';
 import { getUserId } from '@/lib/config/env';
-
-const NOTES_QUERY_KEY = 'notes';
-const ARCHIVED_QUERY_KEY = 'archived-notes';
-const DELETED_QUERY_KEY = 'deleted-notes';
+import { deduplicateNotes } from '@/lib/services/note-utils';
+import { NOTES_QUERY_KEY, ARCHIVED_QUERY_KEY, DELETED_QUERY_KEY } from './query-keys';
 
 export function useNotesView(view: NoteView = 'all') {
   const userId = getUserId();
@@ -21,13 +19,7 @@ export function useNotesView(view: NoteView = 'all') {
     queryKey: [NOTES_QUERY_KEY, userId],
     queryFn: async () => {
       const result = await getAllNotes(userId);
-      const seenIds = new Set<string>();
-      const deduplicated = result.filter((note) => {
-        if (seenIds.has(note.id)) return false;
-        seenIds.add(note.id);
-        return true;
-      });
-      return deduplicated;
+      return deduplicateNotes(result);
     },
     enabled: view === 'all',
     staleTime: isOnline ? 0 : 5 * 60 * 1000,
@@ -40,36 +32,12 @@ export function useNotesView(view: NoteView = 'all') {
     placeholderData: (previousData) => !isOnline ? previousData : undefined,
   });
 
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (view === 'all' && isOnline) {
-      const timeoutId = setTimeout(() => {
-        activeQuery.refetch({ cancelRefetch: false });
-      }, 50);
-      return () => clearTimeout(timeoutId);
-    }
-  }, []);
-
   const isRefetchingRef = useRef(false);
 
   useEffect(() => {
-    if (view !== 'all') return;
-
     const handleOnline = () => {
       setIsOnline(true);
-      if (!isRefetchingRef.current) {
+      if (view === 'all' && !isRefetchingRef.current) {
         isRefetchingRef.current = true;
         setTimeout(() => {
           activeQuery.refetch({ cancelRefetch: false }).finally(() => {
@@ -87,11 +55,21 @@ export function useNotesView(view: NoteView = 'all') {
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, [view, activeQuery]);
+
+  useEffect(() => {
+    if (view === 'all' && isOnline) {
+      const timeoutId = setTimeout(() => {
+        activeQuery.refetch({ cancelRefetch: false });
+      }, 50);
+      return () => clearTimeout(timeoutId);
+    }
+  }, []);
 
   useEffect(() => {
     if (view !== 'all') return;

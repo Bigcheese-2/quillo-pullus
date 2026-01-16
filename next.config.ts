@@ -2,8 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Added empty turbopack config to silence the warning
-  // next-pwa uses webpack, so we need to allow webpack config
   turbopack: {},
   webpack: (config, { isServer }) => {
     if (!isServer) {

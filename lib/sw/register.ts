@@ -27,6 +27,39 @@ export async function registerServiceWorker(
       scope: '/',
     });
 
+    await navigator.serviceWorker.ready;
+
+    if (registration.waiting) {
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    if (registration.installing) {
+      await new Promise<void>((resolve) => {
+        const worker = registration.installing;
+        if (!worker) {
+          resolve();
+          return;
+        }
+        
+        const stateChange = () => {
+          if (worker.state === 'installed' || worker.state === 'activated') {
+            worker.removeEventListener('statechange', stateChange);
+            resolve();
+          }
+        };
+        worker.addEventListener('statechange', stateChange);
+        
+        if (worker.state === 'installed' || worker.state === 'activated') {
+          resolve();
+        }
+      });
+    }
+
+    if (!navigator.serviceWorker.controller) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
     registration.addEventListener('updatefound', () => {
       const newWorker = registration.installing;
       if (!newWorker) return;
@@ -65,7 +98,8 @@ export async function unregisterServiceWorkers(): Promise<void> {
   try {
     const registrations = await navigator.serviceWorker.getRegistrations();
     await Promise.all(registrations.map((registration) => registration.unregister()));
-  } catch (error) {
+  } catch {
+    // Ignore errors during unregistration
   }
 }
 

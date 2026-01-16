@@ -35,6 +35,34 @@ export function SyncStatusBadge({
    * Gets the status badge configuration based on sync state.
    */
   const getStatusConfig = () => {
+    const hasPendingOperations = syncState.pendingCount > 0 || syncState.failedCount > 0;
+    
+    if (hasPendingOperations) {
+      switch (syncState.status) {
+        case 'syncing':
+          return {
+            icon: Loader2,
+            label: 'Syncing...',
+            variant: 'secondary' as const,
+            className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700',
+          };
+        case 'pending':
+          return {
+            icon: Clock,
+            label: syncState.pendingCount > 0 ? `${syncState.pendingCount} Pending` : 'Pending',
+            variant: 'secondary' as const,
+            className: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700',
+          };
+        case 'failed':
+          return {
+            icon: AlertCircle,
+            label: syncState.failedCount > 0 ? `${syncState.failedCount} Failed` : 'Failed',
+            variant: 'destructive' as const,
+            className: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700',
+          };
+      }
+    }
+    
     if (!syncState.isOnline) {
       return {
         icon: WifiOff,

@@ -6,6 +6,7 @@ import { getSyncStatus, processSyncQueue } from '@/lib/services/sync-manager';
 import { formatConflictMessage } from '@/lib/services/conflict-resolver';
 import type { SyncState } from '@/lib/types/sync';
 import { getUserId } from '@/lib/config/env';
+import { getErrorMessage } from '@/lib/utils/error-handler';
 
 const SYNC_STATUS_POLL_INTERVAL = 2000;
 
@@ -41,7 +42,7 @@ export function useSyncStatus() {
         lastSyncedAt: status.lastSyncedAt,
       });
     } catch (error) {
-      setLastError(error instanceof Error ? error.message : 'Unknown error');
+      setLastError(getErrorMessage(error));
     }
   }, []);
 
@@ -69,7 +70,7 @@ export function useSyncStatus() {
       
       return result.syncedCount;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       setLastError(errorMessage);
       throw error;
     } finally {

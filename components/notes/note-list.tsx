@@ -1,11 +1,11 @@
 "use client";
 
-import { Note } from "@/lib/types/note";
+import { Note, NoteView } from "@/lib/types/note";
 import { NoteCard } from "./note-card";
 import { NoteSkeletons } from "./note-skeleton";
 import { usePendingNotes } from "@/hooks/use-pending-notes";
 import { cn } from "@/lib/utils";
-import { FileText, Plus } from "lucide-react";
+import { FileText, Plus, Archive, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NoteListProps {
@@ -19,6 +19,7 @@ interface NoteListProps {
   isMultiSelectMode?: boolean;
   multiSelectedIds?: Set<string>;
   onMultiSelectToggle?: (noteId: string, e?: React.MouseEvent) => void;
+  view?: NoteView;
 }
 
 export function NoteList({
@@ -32,6 +33,7 @@ export function NoteList({
   isMultiSelectMode = false,
   multiSelectedIds = new Set(),
   onMultiSelectToggle,
+  view = 'all',
 }: NoteListProps) {
   const pendingNoteIds = usePendingNotes();
 
@@ -44,25 +46,61 @@ export function NoteList({
   }
 
   if (notes.length === 0) {
+    const getEmptyStateContent = () => {
+      if (searchQuery) {
+        return {
+          icon: FileText,
+          title: 'No notes found',
+          message: `No notes match "${searchQuery}". Try a different search term.`,
+          showButton: false,
+        };
+      }
+
+      switch (view) {
+        case 'trash':
+          return {
+            icon: Trash2,
+            title: 'Trash is empty',
+            message: 'Notes you delete will appear here. You can restore them or delete them permanently.',
+            showButton: false,
+          };
+        case 'archived':
+          return {
+            icon: Archive,
+            title: 'No archived notes',
+            message: 'Notes you archive will appear here. Archived notes are hidden from your main notes list.',
+            showButton: false,
+          };
+        default:
+          return {
+            icon: FileText,
+            title: 'No notes yet',
+            message: 'Get started by creating your first note. Capture your thoughts, ideas, and reminders all in one place.',
+            showButton: true,
+          };
+      }
+    };
+
+    const emptyState = getEmptyStateContent();
+    const EmptyIcon = emptyState.icon;
+
     return (
       <div className={cn("flex items-center justify-center h-full p-6", className)}>
         <div className="text-center space-y-6 max-w-sm">
           <div className="flex justify-center">
             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
-              <FileText className="w-10 h-10 text-muted-foreground" />
+              <EmptyIcon className="w-10 h-10 text-muted-foreground" />
             </div>
           </div>
           <div className="space-y-2">
             <h3 className="text-lg font-semibold text-foreground">
-              {searchQuery ? 'No notes found' : 'No notes yet'}
+              {emptyState.title}
             </h3>
             <p className="text-sm text-muted-foreground">
-              {searchQuery
-                ? `No notes match "${searchQuery}". Try a different search term.`
-                : 'Get started by creating your first note. Capture your thoughts, ideas, and reminders all in one place.'}
+              {emptyState.message}
             </p>
           </div>
-          {onNewNote && (
+          {emptyState.showButton && onNewNote && (
             <Button
               onClick={onNewNote}
               className="bg-accent hover:bg-accent/90 text-white rounded-lg"

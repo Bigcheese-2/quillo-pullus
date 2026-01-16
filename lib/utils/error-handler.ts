@@ -1,5 +1,10 @@
 import { isDevelopment } from '@/lib/config/env';
 
+
+export function getErrorMessage(error: unknown, defaultMessage = 'Unknown error'): string {
+  return error instanceof Error ? error.message : defaultMessage;
+}
+
 export enum ErrorType {
   NETWORK = 'NETWORK',
   API = 'API',
@@ -127,6 +132,5 @@ export function logError(error: AppError, context?: string): void {
   if (!isDevelopment()) {
     return;
   }
-  // Console logging removed
 }
 

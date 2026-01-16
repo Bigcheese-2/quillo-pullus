@@ -3,10 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getAllNotes, getArchivedNotes, getDeletedNotes } from '@/lib/services/note-service';
 import { getUserId } from '@/lib/config/env';
-
-const NOTES_QUERY_KEY = 'notes';
-const ARCHIVED_QUERY_KEY = 'archived-notes';
-const DELETED_QUERY_KEY = 'deleted-notes';
+import { NOTES_QUERY_KEY, ARCHIVED_QUERY_KEY, DELETED_QUERY_KEY } from './query-keys';
 
 export function useNoteCounts() {
   const userId = getUserId();
@@ -20,13 +17,6 @@ export function useNoteCounts() {
         return [];
       }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
-    retry: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-    throwOnError: false,
   });
 
   const archivedQuery = useQuery({
@@ -38,13 +28,6 @@ export function useNoteCounts() {
         return [];
       }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
-    retry: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-    throwOnError: false,
   });
 
   const deletedQuery = useQuery({
@@ -56,13 +39,6 @@ export function useNoteCounts() {
         return [];
       }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
-    retry: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-    throwOnError: false,
   });
 
   return {

@@ -5,8 +5,8 @@ import {
   saveNote,
   deleteNote as deleteNoteFromDB,
 } from '@/lib/db/indexeddb';
-import { queueSyncOperation as queueSyncOp } from './sync-manager';
-import { isOnline, generateSyncId, generateUUID } from './note-utils';
+import { isOnline, generateUUID } from './note-utils';
+import { queueSyncOperationHelper } from './note-helpers';
 
 export async function createNote(input: CreateNoteInput): Promise<Note> {
   const now = new Date().toISOString();
@@ -21,36 +21,29 @@ export async function createNote(input: CreateNoteInput): Promise<Note> {
 
   await saveNote(newNote);
 
+  await queueSyncOperationHelper('create', newNote.id, input, now);
+
   if (isOnline()) {
     noteAPI.createNote(input)
       .then(async (syncedNote) => {
+        const { getSyncOperations, deleteSyncOperation } = await import('@/lib/db/indexeddb');
+        const operations = await getSyncOperations();
+        const queuedOp = operations.find(op => op.noteId === newNote.id && op.type === 'create' && (op.status === 'pending' || op.status === 'syncing'));
+        if (queuedOp) {
+          await deleteSyncOperation(queuedOp.id);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('sync-operation-completed'));
+          }
+        }
         await deleteNoteFromDB(newNote.id);
         await saveNote(syncedNote);
       })
-      .catch(async (error) => {
-        await queueSyncOp({
-          id: generateSyncId(),
-          type: 'create',
-          noteId: newNote.id,
-          noteData: input,
-          status: 'pending',
-          queuedAt: now,
-          retryCount: 0,
-        });
+      .catch(() => {
+        // Ignore errors - operation is queued for retry
       });
-    return newNote;
-  } else {
-    await queueSyncOp({
-      id: generateSyncId(),
-      type: 'create',
-      noteId: newNote.id,
-      noteData: input,
-      status: 'pending',
-      queuedAt: now,
-      retryCount: 0,
-    });
-    return newNote;
   }
+  
+  return newNote;
 }
 
 export async function updateNote(
@@ -81,27 +74,11 @@ export async function updateNote(
         await saveNote(syncedNote);
       })
       .catch(async (error) => {
-        await queueSyncOp({
-          id: generateSyncId(),
-          type: 'update',
-          noteId: id,
-          noteData: updates,
-          status: 'pending',
-          queuedAt: new Date().toISOString(),
-          retryCount: 0,
-        });
+        await queueSyncOperationHelper('update', id, updates);
       });
     return updatedNote;
   } else {
-    await queueSyncOp({
-      id: generateSyncId(),
-      type: 'update',
-      noteId: id,
-      noteData: updates,
-      status: 'pending',
-      queuedAt: new Date().toISOString(),
-      retryCount: 0,
-    });
+    await queueSyncOperationHelper('update', id, updates);
     return updatedNote;
   }
 }
@@ -122,26 +99,10 @@ export async function deleteNote(id: string, userId: string): Promise<void> {
     try {
       await noteAPI.deleteNote(id, userId);
     } catch (error) {
-      await queueSyncOp({
-        id: generateSyncId(),
-        type: 'delete',
-        noteId: id,
-        noteData: undefined,
-        status: 'pending',
-        queuedAt: new Date().toISOString(),
-        retryCount: 0,
-      });
+      await queueSyncOperationHelper('delete', id);
     }
   } else {
-    await queueSyncOp({
-      id: generateSyncId(),
-      type: 'delete',
-      noteId: id,
-      noteData: undefined,
-      status: 'pending',
-      queuedAt: new Date().toISOString(),
-      retryCount: 0,
-    });
+    await queueSyncOperationHelper('delete', id);
   }
 }
 

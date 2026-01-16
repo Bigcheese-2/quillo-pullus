@@ -9,14 +9,12 @@ export async function syncFromServer(userId: string): Promise<import('./conflict
   try {
     const serverNotes = await noteAPI.fetchAllNotes(userId);
     
-    
     const { detectAndResolveAllConflictsWithNotes } = await import('./conflict-resolver');
     const conflicts = await detectAndResolveAllConflictsWithNotes(userId, serverNotes);
     
     const notesToSave = await Promise.all(serverNotes.map(async (serverNote) => {
       const localNote = await getNoteById(serverNote.id);
       if (localNote) {
-        // Merge server data with local archived/deleted values
         return {
           ...serverNote,
           archived: localNote.archived ?? false,
